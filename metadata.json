@@ -1,0 +1,6 @@
+{
+  "name": "Fish Game Admin Dashboard",
+  "description": "Quản lý game cá 2D, người chơi, và hệ thống chỉ số.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
