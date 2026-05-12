@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   BarChart3, 
   Users, 
@@ -10,7 +10,8 @@ import {
   Filter,
   DollarSign,
   Gamepad2,
-  Play
+  Play,
+  ServerCrash
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -32,8 +33,34 @@ const data = [
   { name: 'CN', players: 3490, revenue: 4300 },
 ];
 
+type ApiStatus = 'checking' | 'online' | 'offline';
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [apiStatus, setApiStatus] = useState<ApiStatus>('checking');
+  const [apiUptime, setApiUptime] = useState<string | null>(null);
+
+  // Live backend health check — polls every 30 seconds
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch('/api/v1/health', { signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+          const data = await res.json();
+          setApiStatus('online');
+          setApiUptime(data.uptime ?? null);
+        } else {
+          setApiStatus('offline');
+        }
+      } catch {
+        setApiStatus('offline');
+      }
+    };
+
+    checkHealth();
+    const interval = setInterval(checkHealth, 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex h-screen bg-[#0a0f1d] text-[#e2e8f0] font-sans selection:bg-blue-500/30 overflow-hidden">
@@ -117,12 +144,28 @@ export default function App() {
             {activeTab === 'settings' && 'Cài đặt'}
             {activeTab === 'gameplay' && 'Màn hình Game'}
           </h2>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
+            {/* Backend API Status Badge */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-[10px] font-bold uppercase tracking-wider ${
+              apiStatus === 'online'
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                : apiStatus === 'offline'
+                ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                : 'bg-slate-700/50 border-slate-600 text-slate-400'
+            }`}>
+              {apiStatus === 'online' ? (
+                <><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />API Online{apiUptime ? ` · ${apiUptime}` : ''}</>
+              ) : apiStatus === 'offline' ? (
+                <><ServerCrash className="w-3 h-3" />API Offline</>
+              ) : (
+                <><span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-pulse" />Connecting...</>
+              )}
+            </div>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-500" />
-              <input 
-                type="text" 
-                placeholder="Tìm kiếm..." 
+              <input
+                type="text"
+                placeholder="Tìm kiếm..."
                 className="pl-8 pr-3 py-1.5 bg-slate-800 border-none rounded text-[10px] w-40 text-[#e2e8f0] placeholder-slate-500 outline-none ring-1 ring-slate-700 focus:ring-blue-500"
               />
             </div>
