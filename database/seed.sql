@@ -6,7 +6,7 @@
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm"; -- For fuzzy text search
-
+-- change the name table Users:
 -- ─── Players Table ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS players (
     id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+
 -- ─── Game Sessions Table ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS game_sessions (
     id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -62,6 +63,7 @@ CREATE TABLE IF NOT EXISTS game_sessions (
 CREATE INDEX idx_sessions_player ON game_sessions(player_id);
 CREATE INDEX idx_sessions_room   ON game_sessions(room_id);
 
+--change import row UserType( if value = 1 data type char(1))
 -- ─── Admin Users Table ────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS admin_users (
     id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
