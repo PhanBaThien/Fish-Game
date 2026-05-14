@@ -19,8 +19,8 @@ import (
 	authHttp "github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/transport/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -44,27 +44,49 @@ func main() {
 	hasher := utils.NewPasswordHasher()
 	tokenMaker := utils.NewTokenMaker(os.Getenv("TOKEN_SYMMETRIC_KEY"), jwt.SigningMethodHS256)
 
-	// 4. Dependency Injection (Lắp ráp các tầng)
+	// 4. Dependency Injection — Repositories
 	adminRepo := repository.NewAdminRepository(db)
+	playerRepo := repository.NewPlayerRepository(db)
+	fishRepo := repository.NewFishRepository(db)
+	roomRepo := repository.NewRoomRepository(db)
+	txRepo := repository.NewTransactionRepository(db)
+	settingRepo := repository.NewSettingRepository(db)
+	statsRepo := repository.NewStatsRepository(db)
+
+	// 5. Dependency Injection — Usecases
 	authUsecase := usecase.NewAuthUsecase(adminRepo, hasher, tokenMaker)
+	playerUsecase := usecase.NewPlayerUsecase(playerRepo, txRepo, hasher)
+	fishUsecase := usecase.NewFishUsecase(fishRepo)
+	roomUsecase := usecase.NewRoomUsecase(roomRepo)
+	txUsecase := usecase.NewTransactionUsecase(txRepo)
+	settingUsecase := usecase.NewSettingUsecase(settingRepo)
+	statsUsecase := usecase.NewStatsUsecase(statsRepo)
+	searchUsecase := usecase.NewSearchUsecase(playerRepo, roomRepo, fishRepo)
 
-	// Sử dụng alias authHttp và đặt tên biến là authHdl để không trùng lặp
+	// 6. Dependency Injection — Handlers
 	authHdl := authHttp.NewAuthHandler(authUsecase, tokenMaker)
+	playerHdl := authHttp.NewPlayerHandler(playerUsecase, tokenMaker)
+	fishHdl := authHttp.NewFishHandler(fishUsecase, tokenMaker)
+	roomHdl := authHttp.NewRoomHandler(roomUsecase, tokenMaker)
+	cmsHdl := authHttp.NewCmsHandler(txUsecase, settingUsecase, statsUsecase, searchUsecase, tokenMaker)
 
-	// 5. Cấu hình Gin Router
+	// 7. Cấu hình Gin Router
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middleware.Logger())
 	router.Use(middleware.CORS())
 
-	// 6. Đăng ký Routes
+	// 8. Đăng ký Routes
 	v1 := router.Group("/api/v1")
 	{
-		// Tự động đăng ký các route /login, /register, /logout, /me từ handler
-		authHdl.RegisterRoutes(v1)
+		authHdl.RegisterRoutes(v1)   // BE-API-01: /auth/*
+		playerHdl.RegisterRoutes(v1) // BE-API-04: /players/*
+		fishHdl.RegisterRoutes(v1)   // BE-API-05: /fishes/*
+		roomHdl.RegisterRoutes(v1)   // BE-API-06: /rooms/*
+		cmsHdl.RegisterRoutes(v1)    // BE-API-02,03,07,08,09: /health, /stats/*, /transactions, /settings/*, /search
 	}
 
-	// 7. Khởi chạy Server với Graceful Shutdown
+	// 9. Khởi chạy Server với Graceful Shutdown
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
 		port = "8080"

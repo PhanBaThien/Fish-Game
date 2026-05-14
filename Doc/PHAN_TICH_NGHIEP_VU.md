@@ -108,7 +108,7 @@ Cơ chế tính thưởng đặc biệt: **không dùng HP truyền thống**, m
 | BE-API-02 | Health-check | `GET /health` | uptime, status |
 | BE-API-03 | Dashboard stats | `GET /stats/overview`, `GET /stats/timeseries?range=7d` | KPI + dữ liệu biểu đồ |
 | BE-API-04 | CRUD Người chơi | `GET/POST/PUT/DELETE /players`, `POST /players/{id}/ban`, `POST /players/{id}/gift`, `PUT /players/{id}/rtp` | Player list/detail |
-| BE-API-05 | CRUD Cấu hình cá | `GET/POST/PUT/DELETE /fishes` (multiplier, base prob, speed, role) | Fish config |
+| BE-API-05 | CRUD Cấu hình cá | `GET/POST/PUT/DELETE /fishes` (multiplier, base prob, speed, role) | Fish config | 
 | BE-API-06 | CRUD Phòng chơi | `GET/POST/PUT/DELETE /rooms`, `PUT /rooms/{id}/rtp` | Room list/detail |
 | BE-API-07 | Lịch sử giao dịch | `GET /transactions?playerId=&type=` | Audit log thắng/thua/nạp/rút |
 | BE-API-08 | Cài đặt hệ thống | `GET/PUT /settings` | Config global |
