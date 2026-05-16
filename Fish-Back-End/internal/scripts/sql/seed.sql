@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS admin_users (
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+---tại sạo lại set role là varchar ?  password_hash là text ? 
+
 -- 2. BẢNG NGƯỜI CHƠI (Từ struct Player)
 CREATE TABLE IF NOT EXISTS players (
     id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
