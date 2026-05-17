@@ -15,19 +15,13 @@ func RequireRoles(allowedRoles ...int32) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		raw, exists := c.Get(ctxRoleKey)
 		if !exists {
-			c.AbortWithStatusJSON(apperror.ErrInvalidToken.HTTPStatus, gin.H{"error": gin.H{
-				"code":    apperror.ErrInvalidToken.Code,
-				"message": apperror.ErrInvalidToken.Message,
-			}})
+			abortWithAppError(c, apperror.ErrInvalidToken)
 			return
 		}
 
 		roleID := int32(utils.ToInt64(raw))
 		if _, ok := allowed[roleID]; !ok {
-			c.AbortWithStatusJSON(apperror.ErrForbidden.HTTPStatus, gin.H{"error": gin.H{
-				"code":    apperror.ErrForbidden.Code,
-				"message": apperror.ErrForbidden.Message,
-			}})
+			abortWithAppError(c, apperror.ErrForbidden)
 			return
 		}
 

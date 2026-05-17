@@ -20,22 +20,22 @@ type Role struct {
 }
 
 type Room struct {
-    ID         int64
-    Name       string
-    MinBet     int64
-    MaxPlayers int32
-    Description pgtype.Text
-    CreatedAt  pgtype.Timestamptz
-    UpdatedAt  pgtype.Timestamptz
+	ID          int64              `db:"id"          json:"id"`
+	Name        string             `db:"name"        json:"name"`
+	MinBet      int64              `db:"min_bet"     json:"min_bet"`
+	MaxPlayers  int32              `db:"max_players" json:"max_players"`
+	Description pgtype.Text        `db:"description" json:"description"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at"  json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `db:"updated_at"  json:"updated_at"`
 }
 
 type Fish struct {
-    ID               int64
-    Name             string
-    Health           int32
-    RewardMultiplier int32
-    Speed            float64
-    AssetPath        string
-    CreatedAt        pgtype.Timestamptz
-    UpdatedAt        pgtype.Timestamptz
+	ID               int32              `db:"id"                json:"id"`
+	Name             string             `db:"name"              json:"name"`
+	Health           int32              `db:"health"            json:"health"`
+	RewardMultiplier int32              `db:"reward_multiplier" json:"reward_multiplier"`
+	Speed            float64            `db:"speed"             json:"speed"`
+	AssetPath        string             `db:"asset_path"        json:"asset_path"`
+	CreatedAt        pgtype.Timestamptz `db:"created_at"        json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `db:"updated_at"        json:"updated_at"`
 }

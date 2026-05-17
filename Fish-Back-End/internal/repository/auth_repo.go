@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/models"
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/repository/dbgen"
@@ -46,7 +45,7 @@ func mapToModelUser(u dbgen.User) models.User {
 func (r *userPgRepo) ExistsByUsername(ctx context.Context, username string) (bool, error) {
 	exists, err := r.queries.CheckUserExists(ctx, username)
 	if err != nil {
-		return false, fmt.Errorf("userRepo.ExistsByUsername: %w", err)
+		return false, apperror.Wrap("repository", "userRepo.ExistsByUsername", err)
 	}
 	return exists, nil
 }
@@ -57,9 +56,8 @@ func (r *userPgRepo) GetByUsername(ctx context.Context, username string) (*model
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, apperror.ErrUserNotFound
 		}
-		return nil, fmt.Errorf("userRepo.GetByUsername: %w", err)
+		return nil, apperror.Wrap("repository", "userRepo.GetByUsername", err)
 	}
-
 	user := mapToModelUser(res)
 	return &user, nil
 }
@@ -70,29 +68,24 @@ func (r *userPgRepo) GetByID(ctx context.Context, id int64) (*models.User, error
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, apperror.ErrUserNotFound
 		}
-		return nil, fmt.Errorf("userRepo.GetByID: %w", err)
+		return nil, apperror.Wrap("repository", "userRepo.GetByID", err)
 	}
-
 	user := mapToModelUser(res)
 	return &user, nil
 }
 
 func (r *userPgRepo) Create(ctx context.Context, user *models.User) error {
-	params := dbgen.CreateUserParams{
+	res, err := r.queries.CreateUser(ctx, dbgen.CreateUserParams{
 		Username: user.Username,
 		Email:    user.Email,
 		Password: user.Password,
 		RoleID:   user.RoleID,
-	}
-
-	res, err := r.queries.CreateUser(ctx, params)
+	})
 	if err != nil {
-		return fmt.Errorf("userRepo.Create: %w", err)
+		return apperror.Wrap("repository", "userRepo.Create", err)
 	}
-
 	user.ID = res.ID
 	user.CreatedAt = res.CreatedAt
 	user.UpdatedAt = res.UpdatedAt
-
 	return nil
 }

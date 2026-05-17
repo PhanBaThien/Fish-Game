@@ -24,11 +24,7 @@ type authUsecase struct {
 }
 
 func NewAuthUsecase(repo repository.UserRepository, hasher utils.PasswordHasher, token utils.TokenMaker) AuthUsecase {
-	return &authUsecase{
-		userRepo:   repo,
-		hasher:     hasher,
-		tokenMaker: token,
-	}
+	return &authUsecase{userRepo: repo, hasher: hasher, tokenMaker: token}
 }
 
 func (u *authUsecase) Login(ctx context.Context, req *domain.LoginRequest) (*domain.LoginResponse, error) {
@@ -43,7 +39,7 @@ func (u *authUsecase) Login(ctx context.Context, req *domain.LoginRequest) (*dom
 
 	tokenString, expiresAt, err := u.tokenMaker.CreateToken(user.ID, user.RoleID, 24*time.Hour)
 	if err != nil {
-		return nil, apperror.ErrInternalServer
+		return nil, apperror.Wrap("usecase", "authUsecase.Login.CreateToken", err)
 	}
 
 	return &domain.LoginResponse{
@@ -56,7 +52,7 @@ func (u *authUsecase) Login(ctx context.Context, req *domain.LoginRequest) (*dom
 func (u *authUsecase) Register(ctx context.Context, req *domain.RegisterRequest) (*domain.RegisterResponse, error) {
 	exists, err := u.userRepo.ExistsByUsername(ctx, req.Username)
 	if err != nil {
-		return nil, apperror.ErrInternalServer
+		return nil, err // InternalError từ repo, giữ nguyên context
 	}
 	if exists {
 		return nil, apperror.ErrUsernameExisted
@@ -64,7 +60,7 @@ func (u *authUsecase) Register(ctx context.Context, req *domain.RegisterRequest)
 
 	passwordHash, err := u.hasher.HashPassword(req.Password)
 	if err != nil {
-		return nil, apperror.ErrInternalServer
+		return nil, apperror.Wrap("usecase", "authUsecase.Register.HashPassword", err)
 	}
 
 	user := &models.User{
@@ -75,7 +71,7 @@ func (u *authUsecase) Register(ctx context.Context, req *domain.RegisterRequest)
 	}
 
 	if err = u.userRepo.Create(ctx, user); err != nil {
-		return nil, apperror.ErrInternalServer
+		return nil, err // InternalError từ repo, giữ nguyên context
 	}
 
 	return &domain.RegisterResponse{

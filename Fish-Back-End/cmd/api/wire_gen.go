@@ -14,15 +14,23 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Injectors from wire.go:
-
-// InitializeApp là hàm mẫu, Wire sẽ đọc hàm này và đẻ ra code thật
 func InitializeApp(db *pgxpool.Pool, hasher utils.PasswordHasher, tokenMaker utils.TokenMaker) (http.Handlers, error) {
 	userRepository := repository.NewUserRepository(db)
 	authUsecase := usecase.NewAuthUsecase(userRepository, hasher, tokenMaker)
 	authHandler := http.NewAuthHandler(authUsecase, tokenMaker)
+
+	roomRepository := repository.NewRoomRepository(db)
+	roomUsecase := usecase.NewRoomUsecase(roomRepository)
+	roomHandler := http.NewRoomHandler(roomUsecase, tokenMaker)
+
+	fishRepository := repository.NewFishRepository(db)
+	fishUsecase := usecase.NewFishUsecase(fishRepository)
+	fishHandler := http.NewFishHandler(fishUsecase, tokenMaker)
+
 	handlers := http.Handlers{
 		Auth: authHandler,
+		Room: roomHandler,
+		Fish: fishHandler,
 	}
 	return handlers, nil
 }

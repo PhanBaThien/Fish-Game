@@ -1,13 +1,16 @@
 package http
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/transport/http/middleware"
+	"github.com/gin-gonic/gin"
 )
 
 type Handlers struct {
-	Auth   *AuthHandler
+	Auth *AuthHandler
+	Room *RoomHandler
+	Fish *FishHandler
 }
+
 func SetupRouter(h Handlers) *gin.Engine {
 	router := gin.New()
 
@@ -20,9 +23,12 @@ func SetupRouter(h Handlers) *gin.Engine {
 		if h.Auth != nil {
 			h.Auth.RegisterRoutes(v1)
 		}
-		// if h.Player != nil {
-		// 	h.Player.RegisterRoutes(v1)
-		// }
+		if h.Room != nil {
+			h.Room.RegisterRoutes(v1)
+		}
+		if h.Fish != nil {
+			h.Fish.RegisterRoutes(v1)
+		}
 	}
 
 	return router

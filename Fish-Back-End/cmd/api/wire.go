@@ -13,22 +13,25 @@ import (
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/pkg/utils"
 )
 
-// InitializeApp là hàm mẫu, Wire sẽ đọc hàm này và đẻ ra code thật
 func InitializeApp(db *pgxpool.Pool, hasher utils.PasswordHasher, tokenMaker utils.TokenMaker) (authHttp.Handlers, error) {
 	wire.Build(
-		// 1. Tiêm Repositories
+		// Repositories
 		repository.NewUserRepository,
+		repository.NewRoomRepository,
+		repository.NewFishRepository,
 
-		// 2. Tiêm Usecases
+		// Usecases
 		usecase.NewAuthUsecase,
+		usecase.NewRoomUsecase,
+		usecase.NewFishUsecase,
 
-		// 3. Tiêm Handlers
+		// Handlers
 		authHttp.NewAuthHandler,
+		authHttp.NewRoomHandler,
+		authHttp.NewFishHandler,
 
-		// 4. Tự động nhét tất cả Handlers vào struct authHttp.Handlers
 		wire.Struct(new(authHttp.Handlers), "*"),
 	)
 
-	// Giá trị return này chỉ là dummy (giả), Wire sẽ tự ghi đè
 	return authHttp.Handlers{}, nil
 }

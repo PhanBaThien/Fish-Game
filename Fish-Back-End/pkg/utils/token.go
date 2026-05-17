@@ -3,7 +3,6 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/pkg/apperror"
@@ -66,6 +65,5 @@ func (m *jwtMaker) ExtractToken(tokenString string) (*jwt.MapClaims, error) {
 	if !ok || !token.Valid {
 		return nil, apperror.ErrInvalidToken
 	}
-	log.Print(claims)
 	return &claims, nil
 }

@@ -8,9 +8,30 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Fish struct {
+	ID               int32
+	Name             string
+	Health           int32
+	RewardMultiplier int32
+	Speed            float64
+	AssetPath        string
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+}
+
 type Role struct {
 	ID       int32
 	RoleName string
+}
+
+type Room struct {
+	ID          int64
+	Name        string
+	MinBet      int64
+	MaxPlayers  int32
+	Description pgtype.Text
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
 }
 
 type User struct {

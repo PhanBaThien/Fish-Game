@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/pkg/apperror"
@@ -15,36 +16,34 @@ const (
 	ctxRoleKey              = "role_id"
 )
 
+func abortWithAppError(c *gin.Context, err *apperror.AppError) {
+	c.AbortWithStatusJSON(err.HTTPStatus, gin.H{"error": gin.H{
+		"code":    err.Code,
+		"message": err.Error(),
+	}})
+}
+
 func AuthMiddleware(tokenMaker utils.TokenMaker) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader(authorizationHeaderKey)
 		if len(authHeader) == 0 {
-			c.AbortWithStatusJSON(apperror.ErrInvalidToken.HTTPStatus, gin.H{"error": gin.H{
-				"code":    apperror.ErrInvalidToken.Code,
-				"message": "thiếu header Authorization",
-			}})
+			abortWithAppError(c, apperror.New("INVALID_TOKEN", apperror.ErrInvalidToken.HTTPStatus, errors.New("thiếu header Authorization")))
 			return
 		}
 
 		fields := strings.Fields(authHeader)
 		if len(fields) < 2 || strings.ToLower(fields[0]) != authorizationTypeBearer {
-			c.AbortWithStatusJSON(apperror.ErrInvalidToken.HTTPStatus, gin.H{"error": gin.H{
-				"code":    apperror.ErrInvalidToken.Code,
-				"message": "định dạng token không hợp lệ",
-			}})
+			abortWithAppError(c, apperror.New("INVALID_TOKEN", apperror.ErrInvalidToken.HTTPStatus, errors.New("định dạng token không hợp lệ")))
 			return
 		}
 
 		claims, err := tokenMaker.ExtractToken(fields[1])
 		if err != nil {
-			appErr, ok := err.(*apperror.AppError)
-			if !ok {
+			var appErr *apperror.AppError
+			if !errors.As(err, &appErr) {
 				appErr = apperror.ErrInvalidToken
 			}
-			c.AbortWithStatusJSON(appErr.HTTPStatus, gin.H{"error": gin.H{
-				"code":    appErr.Code,
-				"message": appErr.Message,
-			}})
+			abortWithAppError(c, appErr)
 			return
 		}
 

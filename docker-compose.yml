@@ -1,112 +1,40 @@
-# ============================================================
-# Fish Game Management System - Docker Compose
-# ============================================================
-# Usage:
-#   make up     → docker compose up -d
-#   make down   → docker compose down
-#   make logs   → docker compose logs -f
-# ============================================================
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: fish_game
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fish_game"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-version: "3.9"
+  backend:
+    build: ./Fish-Back-End
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_PORT: 8080
+      DATABASE_URL: postgres://postgres:postgres@db:5432/fish_game?sslmode=disable
+      TOKEN_SYMMETRIC_KEY: ${TOKEN_SYMMETRIC_KEY}
+      ALLOWED_ORIGINS: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
 
-networks:
-  fishgame-net:
-    driver: bridge
+  frontend:
+    build: ./Fish-Front-End
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
-  redis_data:
-
-services:
-
-  # ─── PostgreSQL Database ─────────────────────────────────────
-  postgres:
-    image: postgres:16-alpine
-    container_name: fishgame-postgres
-    restart: unless-stopped
-    networks:
-      - fishgame-net
-    environment:
-      POSTGRES_DB:       ${DB_NAME:-fishgame_db}
-      POSTGRES_USER:     ${DB_USER:-fishgame}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-fishgame_secret}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./database/seed.sql:/docker-entrypoint-initdb.d/01_seed.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-fishgame} -d ${DB_NAME:-fishgame_db}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ─── Redis Cache & WebSocket State ────────────────────────────
-  redis:
-    image: redis:7-alpine
-    container_name: fishgame-redis
-    restart: unless-stopped
-    networks:
-      - fishgame-net
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ─── Go Backend API ───────────────────────────────────────────
-  backend-api:
-    build:
-      context: ./backend-api
-      dockerfile: Dockerfile
-    container_name: fishgame-backend
-    restart: unless-stopped
-    networks:
-      - fishgame-net
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      SERVER_PORT:      8080
-      APP_ENV:          ${APP_ENV:-development}
-      DB_HOST:          postgres
-      DB_PORT:          5432
-      DB_USER:          ${DB_USER:-fishgame}
-      DB_PASSWORD:      ${DB_PASSWORD:-fishgame_secret}
-      DB_NAME:          ${DB_NAME:-fishgame_db}
-      DB_SSLMODE:       disable
-      REDIS_HOST:       redis
-      REDIS_PORT:       6379
-      JWT_SECRET:       ${JWT_SECRET:-change-this-in-production}
-      ALLOWED_ORIGINS:  http://localhost:3000,http://localhost:5173
-    ports:
-      - "8080:8080"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/v1/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-
-  # ─── React Admin Frontend ─────────────────────────────────────
-  frontend-admin:
-    build:
-      context: .
-      dockerfile: Dockerfile          # Uses the existing Dockerfile in repo root
-    container_name: fishgame-frontend
-    restart: unless-stopped
-    networks:
-      - fishgame-net
-    depends_on:
-      - backend-api
-    environment:
-      VITE_API_BASE_URL: http://localhost:8080
-    ports:
-      - "3000:3000"

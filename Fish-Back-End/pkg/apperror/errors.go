@@ -1,24 +1,43 @@
 package apperror
 
-import "net/http"
+import (
+	"errors"
+	"net/http"
+)
 
 type AppError struct {
 	Code       string `json:"code"`
-	Message    string `json:"message"`
 	HTTPStatus int    `json:"-"`
+	Err        error  `json:"-"`
 }
 
 func (e *AppError) Error() string {
-	return e.Message
+	return e.Err.Error()
+}
+
+func (e *AppError) Unwrap() error {
+	return e.Err
+}
+
+// New tạo AppError với error bất kỳ.
+func New(code string, status int, err error) *AppError {
+	return &AppError{Code: code, HTTPStatus: status, Err: err}
+}
+
+// Newf tạo AppError với message string.
+func Newf(code string, status int, msg string) *AppError {
+	return New(code, status, errors.New(msg))
 }
 
 var (
-	ErrBadRequest         = &AppError{Code: "BAD_REQUEST", Message: "dữ liệu yêu cầu không hợp lệ", HTTPStatus: http.StatusBadRequest}
-	ErrInvalidCredentials = &AppError{Code: "INVALID_CREDENTIALS", Message: "tài khoản hoặc mật khẩu không đúng", HTTPStatus: http.StatusUnauthorized}
-	ErrUsernameExisted    = &AppError{Code: "USERNAME_EXISTED", Message: "tài khoản đã tồn tại", HTTPStatus: http.StatusConflict}
-	ErrUserNotFound       = &AppError{Code: "USER_NOT_FOUND", Message: "không tìm thấy người dùng", HTTPStatus: http.StatusNotFound}
-	ErrInvalidToken       = &AppError{Code: "INVALID_TOKEN", Message: "token không hợp lệ", HTTPStatus: http.StatusUnauthorized}
-	ErrExpiredToken       = &AppError{Code: "EXPIRED_TOKEN", Message: "token đã hết hạn", HTTPStatus: http.StatusUnauthorized}
-	ErrForbidden          = &AppError{Code: "FORBIDDEN", Message: "bạn không có quyền thực hiện thao tác này", HTTPStatus: http.StatusForbidden}
-	ErrInternalServer     = &AppError{Code: "INTERNAL_SERVER_ERROR", Message: "lỗi máy chủ nội bộ", HTTPStatus: http.StatusInternalServerError}
+	ErrBadRequest         = Newf("BAD_REQUEST", http.StatusBadRequest, "dữ liệu yêu cầu không hợp lệ")
+	ErrInvalidCredentials = Newf("INVALID_CREDENTIALS", http.StatusUnauthorized, "tài khoản hoặc mật khẩu không đúng")
+	ErrUsernameExisted    = Newf("USERNAME_EXISTED", http.StatusConflict, "tài khoản đã tồn tại")
+	ErrUserNotFound       = Newf("USER_NOT_FOUND", http.StatusNotFound, "không tìm thấy người dùng")
+	ErrInvalidToken       = Newf("INVALID_TOKEN", http.StatusUnauthorized, "token không hợp lệ")
+	ErrExpiredToken       = Newf("EXPIRED_TOKEN", http.StatusUnauthorized, "token đã hết hạn")
+	ErrForbidden          = Newf("FORBIDDEN", http.StatusForbidden, "bạn không có quyền thực hiện thao tác này")
+	ErrRoomNotFound       = Newf("ROOM_NOT_FOUND", http.StatusNotFound, "không tìm thấy phòng")
+	ErrFishNotFound       = Newf("FISH_NOT_FOUND", http.StatusNotFound, "không tìm thấy cá")
+	ErrInternalServer     = Newf("INTERNAL_SERVER_ERROR", http.StatusInternalServerError, "lỗi máy chủ nội bộ")
 )
