@@ -2,7 +2,6 @@ package utils
 
 import "golang.org/x/crypto/bcrypt"
 
-// Khai báo Interface để tuân thủ OOP (Tính trừu tượng)
 type PasswordHasher interface {
 	CompareHashAndPassword(hash string, password string) error
 	HashPassword(password string) (string, error)
@@ -10,7 +9,6 @@ type PasswordHasher interface {
 
 type bcryptHasher struct{}
 
-// Hàm khởi tạo (giống Constructor)
 func NewPasswordHasher() PasswordHasher {
 	return &bcryptHasher{}
 }

@@ -6,16 +6,12 @@ import (
 	"log"
 	"time"
 
+	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/pkg/apperror"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var (
-	ErrInvalidToken = errors.New("token không hợp lệ")
-	ErrExpiredToken = errors.New("token đã hết hạn")
-)
-
 type TokenMaker interface {
-	CreateToken(adminID string, role string, duration time.Duration) (string, int64, error)
+	CreateToken(userID int64, roleID int32, duration time.Duration) (string, int64, error)
 	ExtractToken(tokenString string) (*jwt.MapClaims, error)
 }
 
@@ -31,12 +27,12 @@ func NewTokenMaker(secretKey string, signingMethod jwt.SigningMethod) TokenMaker
 	}
 }
 
-func (m *jwtMaker) CreateToken(adminID string, role string, duration time.Duration) (string, int64, error) {
+func (m *jwtMaker) CreateToken(userID int64, roleID int32, duration time.Duration) (string, int64, error) {
 	expirationTime := time.Now().Add(duration)
 
 	claims := jwt.MapClaims{
-		"admin_id":  adminID,
-		"role":      role,
+		"user_id":   userID,
+		"role_id":   roleID,
 		"exp":       expirationTime.Unix(),
 		"issued_at": time.Now().Unix(),
 	}
@@ -56,20 +52,19 @@ func (m *jwtMaker) ExtractToken(tokenString string) (*jwt.MapClaims, error) {
 		if token.Method.Alg() != m.signingMethod.Alg() {
 			return nil, fmt.Errorf("thuật toán ký không khớp: kỳ vọng %s", m.signingMethod.Alg())
 		}
-
 		return []byte(m.secretKey), nil
 	})
 
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, ErrExpiredToken
+			return nil, apperror.ErrExpiredToken
 		}
-		return nil, ErrInvalidToken
+		return nil, apperror.ErrInvalidToken
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return nil, ErrInvalidToken
+		return nil, apperror.ErrInvalidToken
 	}
 	log.Print(claims)
 	return &claims, nil

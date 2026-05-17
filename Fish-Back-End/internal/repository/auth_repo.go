@@ -2,110 +2,97 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/models"
+	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/repository/dbgen"
+	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/pkg/apperror"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var (
-	ErrAdminNotFound = errors.New("không tìm thấy admin")
-)
-
-const (
-	queryGetAdminByUsername = `
-		SELECT id, username, password_hash, role, created_at
-		FROM admin_users
-		WHERE username = $1`
-
-	queryGetAdminByID = `
-		SELECT id, username, password_hash, role, created_at
-		FROM admin_users
-		WHERE id = $1`
-
-	queryCreateAdmin = `
-		INSERT INTO admin_users (username, email, password_hash, role)
-		VALUES ($1, $2, $3, $4)
-		RETURNING id, created_at`
-)
-
-// AdminRepository định nghĩa interface thao tác với bảng admins
-type AdminRepository interface {
-	Create(ctx context.Context, admin *models.Admin) error
+type UserRepository interface {
+	Create(ctx context.Context, user *models.User) error
 	ExistsByUsername(ctx context.Context, username string) (bool, error)
-
-	GetByUsername(ctx context.Context, username string) (*models.Admin, error)
-	GetByID(ctx context.Context, id string) (*models.Admin, error)
+	GetByUsername(ctx context.Context, username string) (*models.User, error)
+	GetByID(ctx context.Context, id int64) (*models.User, error)
 }
 
-type adminPgRepo struct {
-	db *sql.DB
+type userPgRepo struct {
+	pool    *pgxpool.Pool
+	queries *dbgen.Queries
 }
 
-func NewAdminRepository(db *sql.DB) AdminRepository {
-	return &adminPgRepo{db: db}
+func NewUserRepository(pool *pgxpool.Pool) UserRepository {
+	return &userPgRepo{
+		pool:    pool,
+		queries: dbgen.New(pool),
+	}
 }
 
-func (r *adminPgRepo) ExistsByUsername(ctx context.Context, username string) (bool, error) {
-	const query = `SELECT EXISTS(SELECT 1 FROM admins WHERE username = $1)`
-	var exists bool
-	err := r.db.QueryRowContext(ctx, query, username).Scan(&exists)
-	return exists, err
+func mapToModelUser(u dbgen.User) models.User {
+	return models.User{
+		ID:        u.ID,
+		Username:  u.Username,
+		Email:     u.Email,
+		Password:  u.Password,
+		RoleID:    u.RoleID,
+		CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
+	}
 }
 
-// GetByUsername tìm kiếm admin theo tên đăng nhập
-func (r *adminPgRepo) GetByUsername(ctx context.Context, username string) (*models.Admin, error) {
-	var a models.Admin
-	err := r.db.QueryRowContext(ctx, queryGetAdminByUsername, username).
-		Scan(&a.ID, &a.Username, &a.PasswordHash, &a.Role, &a.CreatedAt)
-
+func (r *userPgRepo) ExistsByUsername(ctx context.Context, username string) (bool, error) {
+	exists, err := r.queries.CheckUserExists(ctx, username)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrAdminNotFound // Trả về lỗi chuẩn đã định nghĩa
+		return false, fmt.Errorf("userRepo.ExistsByUsername: %w", err)
+	}
+	return exists, nil
+}
+
+func (r *userPgRepo) GetByUsername(ctx context.Context, username string) (*models.User, error) {
+	res, err := r.queries.GetUserByUsername(ctx, username)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperror.ErrUserNotFound
 		}
-		return nil, fmt.Errorf("adminRepo.GetByUsername: %w", err)
+		return nil, fmt.Errorf("userRepo.GetByUsername: %w", err)
 	}
 
-	return &a, nil
+	user := mapToModelUser(res)
+	return &user, nil
 }
 
-// GetByID tìm kiếm admin theo ID nguyên bản
-func (r *adminPgRepo) GetByID(ctx context.Context, id string) (*models.Admin, error) {
-	var a models.Admin
-	err := r.db.QueryRowContext(ctx, queryGetAdminByID, id).
-		Scan(&a.ID, &a.Username, &a.PasswordHash, &a.Role, &a.CreatedAt)
-
+func (r *userPgRepo) GetByID(ctx context.Context, id int64) (*models.User, error) {
+	res, err := r.queries.GetUserByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrAdminNotFound // Trả về lỗi chuẩn đã định nghĩa
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, apperror.ErrUserNotFound
 		}
-		return nil, fmt.Errorf("adminRepo.GetByID: %w", err)
+		return nil, fmt.Errorf("userRepo.GetByID: %w", err)
 	}
 
-	return &a, nil
+	user := mapToModelUser(res)
+	return &user, nil
 }
 
-// Create thêm một admin mới vào database
-func (r *adminPgRepo) Create(ctx context.Context, admin *models.Admin) error {
-	// 1. Khởi tạo một Transaction (Giao dịch)
-	tx, err := r.db.BeginTx(ctx, nil)
+func (r *userPgRepo) Create(ctx context.Context, user *models.User) error {
+	params := dbgen.CreateUserParams{
+		Username: user.Username,
+		Email:    user.Email,
+		Password: user.Password,
+		RoleID:   user.RoleID,
+	}
+
+	res, err := r.queries.CreateUser(ctx, params)
 	if err != nil {
-		return fmt.Errorf("không thể mở transaction: %w", err)
+		return fmt.Errorf("userRepo.Create: %w", err)
 	}
 
-	defer tx.Rollback()
-
-	err = tx.QueryRowContext(ctx, queryCreateAdmin, admin.Username, admin.Email, admin.PasswordHash, admin.Role).
-		Scan(&admin.ID, &admin.CreatedAt)
-
-	if err != nil {
-		return fmt.Errorf("lỗi insert admin: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("lỗi commit transaction: %w", err)
-	}
+	user.ID = res.ID
+	user.CreatedAt = res.CreatedAt
+	user.UpdatedAt = res.UpdatedAt
 
 	return nil
 }

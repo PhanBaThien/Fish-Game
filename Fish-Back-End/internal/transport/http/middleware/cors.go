@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CORS returns a middleware that sets appropriate CORS headers.
 func CORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		allowedOrigins := os.Getenv("ALLOWED_ORIGINS")

@@ -1,0 +1,47 @@
+Fish-Back-End/
+│
+├── db/                         # Nơi chứa các file SQL nguyên bản để thiết kế DB
+│   ├── schema.sql              # Cấu trúc bảng (bản gốc của seed.sql)
+│   └── query.sql               # Các câu lệnh SELECT, INSERT, UPDATE, DELETE nâng cao
+│
+├── cmd/                        # Điểm khởi chạy ứng dụng
+│   └── api/
+│       └── main.go             # Khởi tạo Postgres Pool, Router Gin, và kích hoạt Server
+│
+├── internal/                   # Chứa code nội bộ (bảo mật, bên ngoài không import được)
+│   │
+│   ├── database/               # Quản lý kết nối hạ tầng
+│   │   └── postgre.go          # Khởi tạo pgxpool.Pool và tự động chạy schema/seed
+│   │
+│   ├── models/                 # Domain Models (Thực thể nghiệp vụ phục vụ API JSON)
+│   │   └── models.go           # File chứa struct Admin, Player, Fish... hiện tại của bạn
+│   │
+│   ├── repository/             # Tầng lưu trữ dữ liệu (Giao tiếp với DB)
+│   │   │
+│   │   ├── dbgen/              # 🤖 CODE DO SQLC TỰ SINH (KHÔNG ĐƯỢC SỬA TAY)
+│   │   │   ├── db.go           # Khởi tạo struct Queries nhận pgxpool
+│   │   │   ├── models.go       # Struct tương ứng với các hàng trong DB do SQLC dịch ra
+│   │   │   └── query.sql.go    # Các hàm Go tương ứng với file query.sql
+│   │   │
+│   │   ├── fish_pg.go          # Triển khai FishRepository (Gọi dbgen + Map data)
+│   │   ├── admin_pg.go         # Triển khai AdminRepository
+│   │   └── player_pg.go        # Triển khai PlayerRepository
+│   │
+│   ├── usecase/                # Tầng nghiệp vụ (Business Logic xử lý Game, Tiền bạc)
+│   │   ├── auth_usecase.go
+│   │   └── fish_usecase.go
+│   │
+│   ├── transport/              # Tầng giao tiếp ngoại vi (Giao thức HTTP)
+│   │   └── http/
+│   │       ├── middleware/     # AuthMiddleware xử lý Bearer Token
+│   │       ├── auth_handler.go # Nhận request login/me từ client
+│   │       └── router.go       # Định tuyến các Group API công khai và bảo mật
+│   │
+│   └── utils/                  # Tiện ích dùng chung
+│       └── jwt_maker.go        # File mã hóa và phân tách JWT Token hoàn chỉnh
+│
+├── .env                        # File cấu hình môi trường thực tế (Không push lên git)
+├── .env.example                # File cấu hình mẫu cho team
+├── sqlc.yaml                   # File cấu hình của công cụ SQLC Compiler
+├── go.mod
+└── go.sum
