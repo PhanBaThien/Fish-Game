@@ -37,7 +37,7 @@ func AuthMiddleware(tokenMaker utils.TokenMaker) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := tokenMaker.ExtractToken(fields[1])
+		claims, err := tokenMaker.VerifyAccessToken(fields[1])
 		if err != nil {
 			var appErr *apperror.AppError
 			if !errors.As(err, &appErr) {

@@ -19,6 +19,14 @@ type Fish struct {
 	UpdatedAt        pgtype.Timestamptz
 }
 
+type RefreshToken struct {
+	ID        int64
+	UserID    int64
+	TokenHash string
+	ExpiresAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
 type Role struct {
 	ID       int32
 	RoleName string

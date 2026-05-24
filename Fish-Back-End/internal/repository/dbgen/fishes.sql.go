@@ -10,7 +10,7 @@ import (
 )
 
 const createFish = `-- name: CreateFish :one
-INSERT INTO fishs (name, health, reward_multiplier, speed, asset_path)
+INSERT INTO fishes (name, health, reward_multiplier, speed, asset_path)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING id, name, health, reward_multiplier, speed, asset_path, created_at, updated_at
 `
@@ -46,7 +46,7 @@ func (q *Queries) CreateFish(ctx context.Context, arg CreateFishParams) (Fish, e
 }
 
 const deleteFish = `-- name: DeleteFish :one
-DELETE FROM fishs
+DELETE FROM fishes
 WHERE id = $1
 RETURNING id
 `
@@ -60,7 +60,7 @@ func (q *Queries) DeleteFish(ctx context.Context, id int32) (int32, error) {
 
 const getFishByID = `-- name: GetFishByID :one
 SELECT id, name, health, reward_multiplier, speed, asset_path, created_at, updated_at
-FROM fishs
+FROM fishes
 WHERE id = $1
 `
 
@@ -82,7 +82,7 @@ func (q *Queries) GetFishByID(ctx context.Context, id int32) (Fish, error) {
 
 const listFishes = `-- name: ListFishes :many
 SELECT id, name, health, reward_multiplier, speed, asset_path, created_at, updated_at
-FROM fishs
+FROM fishes
 ORDER BY reward_multiplier ASC
 `
 
@@ -116,7 +116,7 @@ func (q *Queries) ListFishes(ctx context.Context) ([]Fish, error) {
 }
 
 const updateFish = `-- name: UpdateFish :one
-UPDATE fishs
+UPDATE fishes
 SET name = $1, health = $2, reward_multiplier = $3, speed = $4, asset_path = $5, updated_at = NOW()
 WHERE id = $6
 RETURNING id, name, health, reward_multiplier, speed, asset_path, created_at, updated_at

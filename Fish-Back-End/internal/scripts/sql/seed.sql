@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS fishs (
+CREATE TABLE IF NOT EXISTS fishes (
     id                INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name              VARCHAR(100) NOT NULL,
     health            INT          NOT NULL,
@@ -36,6 +36,14 @@ CREATE TABLE IF NOT EXISTS fishs (
     updated_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id     BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash  VARCHAR(64) NOT NULL UNIQUE,
+    expires_at  TIMESTAMPTZ NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 INSERT INTO rooms (name, min_bet, max_players) VALUES ('Sảnh Tân Thủ', 10, 4), ('Đại Dương Đại Gia', 1000, 4);
-INSERT INTO fishs (name, health, reward_multiplier, asset_path) VALUES ('Cá Con', 1, 2, '/assets/fish/small_fish.glb'), ('Cá Mập Boss', 500, 100, '/assets/fish/shark_boss.glb');
+INSERT INTO fishes (name, health, reward_multiplier, asset_path) VALUES ('Cá Con', 1, 2, '/assets/fish/small_fish.glb'), ('Cá Mập Boss', 500, 100, '/assets/fish/shark_boss.glb');
 INSERT INTO roles (role_name) VALUES ('player'), ('admin') ON CONFLICT DO NOTHING;

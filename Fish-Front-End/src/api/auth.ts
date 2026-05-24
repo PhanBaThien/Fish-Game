@@ -1,5 +1,5 @@
 import { apiClient, extractData } from './client'
-import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, User } from '../types'
+import type { LoginRequest, LoginResponse, RefreshTokenResponse, RegisterRequest, RegisterResponse, User } from '../types'
 
 export const authApi = {
   login: async (data: LoginRequest): Promise<LoginResponse> => {
@@ -15,5 +15,14 @@ export const authApi = {
   me: async (): Promise<User> => {
     const res = await apiClient.get<{ data: User; error: null }>('/auth/me')
     return extractData(res)
+  },
+
+  refresh: async (): Promise<RefreshTokenResponse> => {
+    const res = await apiClient.post<{ data: RefreshTokenResponse; error: null }>('/auth/refresh')
+    return extractData(res)
+  },
+
+  logout: async (): Promise<void> => {
+    await apiClient.post('/auth/logout')
   },
 }

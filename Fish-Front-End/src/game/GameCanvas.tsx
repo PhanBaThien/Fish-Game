@@ -14,31 +14,24 @@ export default function GameCanvas({ room, fishList }: GameCanvasProps) {
   const gameSceneRef = useRef<GameScene | null>(null)
   const { addCoins, addScore } = useGameStore()
 
-  const MIN_BET = room.min_bet
-
   const handleFishKilled = useCallback(
     (rewardMultiplier: number) => {
-      const earned = Math.round(rewardMultiplier * MIN_BET)
-      addCoins(earned)
+      addCoins(Math.round(rewardMultiplier * room.min_bet))
       addScore(1)
     },
-    [MIN_BET, addCoins, addScore],
+    [room.min_bet, addCoins, addScore],
   )
 
   const handleScore = useCallback(
-    (points: number) => {
-      addScore(points)
-    },
+    (points: number) => addScore(points),
     [addScore],
   )
 
   useEffect(() => {
     if (!canvasRef.current) return
 
-    // Small delay to allow canvas layout to settle
     const timeout = setTimeout(() => {
       if (!canvasRef.current) return
-
       gameSceneRef.current = new GameScene({
         canvas: canvasRef.current,
         fishList,
@@ -49,10 +42,8 @@ export default function GameCanvas({ room, fishList }: GameCanvasProps) {
 
     return () => {
       clearTimeout(timeout)
-      if (gameSceneRef.current) {
-        gameSceneRef.current.dispose()
-        gameSceneRef.current = null
-      }
+      gameSceneRef.current?.dispose()
+      gameSceneRef.current = null
     }
   }, [fishList, handleFishKilled, handleScore])
 
@@ -63,8 +54,7 @@ export default function GameCanvas({ room, fishList }: GameCanvasProps) {
         width: '100%',
         height: '100%',
         display: 'block',
-        outline: 'none',
-        touchAction: 'none',
+        cursor: 'none',
       }}
     />
   )

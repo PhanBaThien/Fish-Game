@@ -39,3 +39,11 @@ type Fish struct {
 	CreatedAt        pgtype.Timestamptz `db:"created_at"        json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `db:"updated_at"        json:"updated_at"`
 }
+
+type RefreshToken struct {
+	ID        int64              `db:"id"         json:"-"`
+	UserID    int64              `db:"user_id"    json:"-"`
+	TokenHash string             `db:"token_hash" json:"-"`
+	ExpiresAt pgtype.Timestamptz `db:"expires_at" json:"-"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"-"`
+}

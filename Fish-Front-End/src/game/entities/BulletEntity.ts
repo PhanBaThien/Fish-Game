@@ -1,64 +1,68 @@
-import {
-  Scene,
-  Mesh,
-  MeshBuilder,
-  StandardMaterial,
-  Color3,
-  Vector3,
-} from '@babylonjs/core'
-
-const BULLET_SPEED = 25
-const BULLET_LIFETIME = 3 // seconds
+const BULLET_SPEED = 620 // px/s
+const BULLET_MAX_LIFE = 1.8 // seconds
 
 export class BulletEntity {
-  private mesh: Mesh
-  private velocity: Vector3
-  private lifetime = 0
+  public x: number
+  public y: number
   public isDead = false
 
-  constructor(scene: Scene, origin: Vector3, target: Vector3) {
-    this.mesh = MeshBuilder.CreateSphere(
-      `bullet-${Date.now()}-${Math.random()}`,
-      { diameter: 0.15 },
-      scene,
-    )
-    this.mesh.position = origin.clone()
+  private vx: number
+  private vy: number
+  private lifetime = 0
+  private trail: Array<{ x: number; y: number }> = []
 
-    const mat = new StandardMaterial(`bullet-mat-${Date.now()}`, scene)
-    mat.diffuseColor = new Color3(1, 0.9, 0.2)
-    mat.emissiveColor = new Color3(1, 0.7, 0)
-    mat.disableLighting = true
-    this.mesh.material = mat
-
-    const dir = target.subtract(origin).normalize()
-    this.velocity = dir.scale(BULLET_SPEED)
+  constructor(startX: number, startY: number, targetX: number, targetY: number) {
+    const dx = targetX - startX
+    const dy = targetY - startY
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1
+    this.x = startX
+    this.y = startY
+    this.vx = (dx / dist) * BULLET_SPEED
+    this.vy = (dy / dist) * BULLET_SPEED
   }
 
-  update(deltaTime: number): boolean {
-    if (this.isDead) return true
+  update(dt: number) {
+    if (this.isDead) return
 
-    this.lifetime += deltaTime
-    if (this.lifetime >= BULLET_LIFETIME) {
-      this.destroy()
-      return true
+    this.trail.push({ x: this.x, y: this.y })
+    if (this.trail.length > 7) this.trail.shift()
+
+    this.x += this.vx * dt
+    this.y += this.vy * dt
+    this.lifetime += dt
+
+    if (this.lifetime >= BULLET_MAX_LIFE) this.isDead = true
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    if (this.isDead) return
+
+    // Trail
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = i / this.trail.length
+      ctx.beginPath()
+      ctx.arc(this.trail[i].x, this.trail[i].y, 3 * t, 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(251,191,36,${t * 0.35})`
+      ctx.fill()
     }
 
-    this.mesh.position.addInPlace(this.velocity.scale(deltaTime))
-    return false
-  }
+    // Glow halo
+    const grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 12)
+    grd.addColorStop(0, 'rgba(255,220,50,0.7)')
+    grd.addColorStop(1, 'rgba(255,140,0,0)')
+    ctx.beginPath()
+    ctx.arc(this.x, this.y, 12, 0, Math.PI * 2)
+    ctx.fillStyle = grd
+    ctx.fill()
 
-  getPosition(): Vector3 {
-    return this.mesh.position
-  }
-
-  getMesh(): Mesh {
-    return this.mesh
+    // Core
+    ctx.beginPath()
+    ctx.arc(this.x, this.y, 4, 0, Math.PI * 2)
+    ctx.fillStyle = '#fef08a'
+    ctx.fill()
   }
 
   destroy() {
-    if (!this.isDead) {
-      this.isDead = true
-      this.mesh.dispose()
-    }
+    this.isDead = true
   }
 }

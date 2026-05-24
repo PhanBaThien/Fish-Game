@@ -30,7 +30,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const res = await authApi.login({ username: loginUsername, password: loginPassword })
-      setAuth(res.user, res.token)
+      setAuth(res.user, res.access_token)
       navigate('/lobby', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')

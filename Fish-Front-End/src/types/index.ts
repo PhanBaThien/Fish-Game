@@ -58,9 +58,14 @@ export interface RegisterRequest {
 }
 
 export interface LoginResponse {
-  token: string
-  expiresAt: string
+  access_token: string
+  access_token_expires_at: number
   user: User
+}
+
+export interface RefreshTokenResponse {
+  access_token: string
+  access_token_expires_at: number
 }
 
 export interface RegisterResponse {

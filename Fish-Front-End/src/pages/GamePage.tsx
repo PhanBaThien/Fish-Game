@@ -156,8 +156,7 @@ export default function GamePage() {
         <div className="absolute top-1/2 right-4 -translate-y-1/2 text-right">
           <div className="px-3 py-2 rounded-xl bg-black/30 backdrop-blur border border-white/5 text-white/25 text-xs space-y-1">
             <p>Click to shoot</p>
-            <p>Scroll to zoom</p>
-            <p>Drag to rotate</p>
+            <p>Aim with mouse</p>
           </div>
         </div>
       </div>

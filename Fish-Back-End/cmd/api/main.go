@@ -12,39 +12,46 @@ import (
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/database"
 	authHttp "github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/transport/http"
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/pkg/utils"
-
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 )
 
+func mustDuration(key string, fallback time.Duration) time.Duration {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		log.Fatalf("❌ Giá trị %s không hợp lệ: %v", key, err)
+	}
+	return d
+}
+
 func main() {
-	// 1. Nạp biến môi trường
 	if err := godotenv.Load(); err != nil {
 		log.Println("⚠️ Không tìm thấy file .env, sử dụng biến hệ thống")
 	}
 
-	// 2. Khởi tạo Database (Trọng tâm)
-	rootDSN := os.Getenv("DATABASE_URL")
-	seedPath := "internal/scripts/sql/seed.sql"
-
-	db, err := database.InitDBWithAutomation(rootDSN, seedPath)
+	db, err := database.InitDBWithAutomation(os.Getenv("DATABASE_URL"), "internal/scripts/sql/seed.sql")
 	if err != nil {
 		log.Fatalf("❌ Lỗi khởi tạo Database: %v", err)
 	}
 	defer db.Close()
 
-	hasher := utils.NewPasswordHasher()
-	tokenMaker := utils.NewTokenMaker(os.Getenv("TOKEN_SYMMETRIC_KEY"), jwt.SigningMethodHS256)
+	tokenMaker := utils.NewTokenMaker(
+		os.Getenv("ACCESS_TOKEN_KEY"),
+		os.Getenv("REFRESH_TOKEN_KEY"),
+		mustDuration("ACCESS_TOKEN_EXPIRY", 15*time.Minute),
+		mustDuration("REFRESH_TOKEN_EXPIRY", 168*time.Hour),
+		jwt.SigningMethodHS256,
+	)
 
-	allHandlers, err := InitializeApp(db, hasher, tokenMaker)
+	allHandlers, err := InitializeApp(db, utils.NewPasswordHasher(), tokenMaker)
 	if err != nil {
 		log.Fatalf("❌ Lỗi khởi tạo Dependencies (Wire): %v", err)
 	}
 
-	// 5. Ném cục Struct Handler đó vào Router
-	router := authHttp.SetupRouter(allHandlers)
-
-	// 6. Khởi chạy HTTP Server
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
 		port = "8080"
@@ -52,19 +59,18 @@ func main() {
 
 	srv := &http.Server{
 		Addr:         ":" + port,
-		Handler:      router,
+		Handler:      authHttp.SetupRouter(allHandlers),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 
 	go func() {
-		log.Printf("🐟 Fish Game Server is running on port %s", port)
+		log.Printf("🐟 Fish Game Server đang chạy tại port %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("❌ Lỗi server: %v", err)
 		}
 	}()
 
-	// 7. Graceful Shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -72,7 +78,6 @@ func main() {
 	log.Println("⏳ Đang đóng server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatal("❌ Server buộc phải đóng:", err)
 	}

@@ -16,7 +16,8 @@ import (
 
 func InitializeApp(db *pgxpool.Pool, hasher utils.PasswordHasher, tokenMaker utils.TokenMaker) (http.Handlers, error) {
 	userRepository := repository.NewUserRepository(db)
-	authUsecase := usecase.NewAuthUsecase(userRepository, hasher, tokenMaker)
+	refreshTokenRepository := repository.NewRefreshTokenRepository(db)
+	authUsecase := usecase.NewAuthUsecase(userRepository, refreshTokenRepository, hasher, tokenMaker)
 	authHandler := http.NewAuthHandler(authUsecase, tokenMaker)
 
 	roomRepository := repository.NewRoomRepository(db)

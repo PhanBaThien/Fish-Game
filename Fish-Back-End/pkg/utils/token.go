@@ -10,50 +10,71 @@ import (
 )
 
 type TokenMaker interface {
-	CreateToken(userID int64, roleID int32, duration time.Duration) (string, int64, error)
-	ExtractToken(tokenString string) (*jwt.MapClaims, error)
+	CreateAccessToken(userID int64, roleID int32) (string, int64, error)
+	CreateRefreshToken(userID int64) (string, int64, error)
+	VerifyAccessToken(token string) (*jwt.MapClaims, error)
+	VerifyRefreshToken(token string) (*jwt.MapClaims, error)
 }
 
 type jwtMaker struct {
-	secretKey     string
+	accessKey     string
+	refreshKey    string
+	accessExpiry  time.Duration
+	refreshExpiry time.Duration
 	signingMethod jwt.SigningMethod
 }
 
-func NewTokenMaker(secretKey string, signingMethod jwt.SigningMethod) TokenMaker {
+func NewTokenMaker(
+	accessKey, refreshKey string,
+	accessExpiry, refreshExpiry time.Duration,
+	signingMethod jwt.SigningMethod,
+) TokenMaker {
 	return &jwtMaker{
-		secretKey:     secretKey,
+		accessKey:     accessKey,
+		refreshKey:    refreshKey,
+		accessExpiry:  accessExpiry,
+		refreshExpiry: refreshExpiry,
 		signingMethod: signingMethod,
 	}
 }
 
-func (m *jwtMaker) CreateToken(userID int64, roleID int32, duration time.Duration) (string, int64, error) {
-	expirationTime := time.Now().Add(duration)
-
-	claims := jwt.MapClaims{
-		"user_id":   userID,
-		"role_id":   roleID,
-		"exp":       expirationTime.Unix(),
-		"issued_at": time.Now().Unix(),
-	}
-
+func (m *jwtMaker) createToken(claims jwt.MapClaims, key string) (string, error) {
 	token := jwt.NewWithClaims(m.signingMethod, claims)
-
-	tokenString, err := token.SignedString([]byte(m.secretKey))
+	signed, err := token.SignedString([]byte(key))
 	if err != nil {
-		return "", 0, fmt.Errorf("không thể ký token: %w", err)
+		return "", fmt.Errorf("ký token thất bại: %w", err)
 	}
-
-	return tokenString, expirationTime.Unix(), nil
+	return signed, nil
 }
 
-func (m *jwtMaker) ExtractToken(tokenString string) (*jwt.MapClaims, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if token.Method.Alg() != m.signingMethod.Alg() {
-			return nil, fmt.Errorf("thuật toán ký không khớp: kỳ vọng %s", m.signingMethod.Alg())
-		}
-		return []byte(m.secretKey), nil
-	})
+func (m *jwtMaker) CreateAccessToken(userID int64, roleID int32) (string, int64, error) {
+	exp := time.Now().Add(m.accessExpiry).Unix()
+	tokenStr, err := m.createToken(jwt.MapClaims{
+		"user_id": userID,
+		"role_id": roleID,
+		"type":    "access",
+		"exp":     exp,
+	}, m.accessKey)
+	return tokenStr, exp, err
+}
 
+func (m *jwtMaker) CreateRefreshToken(userID int64) (string, int64, error) {
+	exp := time.Now().Add(m.refreshExpiry).Unix()
+	tokenStr, err := m.createToken(jwt.MapClaims{
+		"user_id": userID,
+		"type":    "refresh",
+		"exp":     exp,
+	}, m.refreshKey)
+	return tokenStr, exp, err
+}
+
+func (m *jwtMaker) verifyToken(tokenStr, key, expectedType string) (*jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+		if t.Method.Alg() != m.signingMethod.Alg() {
+			return nil, fmt.Errorf("thuật toán không khớp")
+		}
+		return []byte(key), nil
+	})
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
 			return nil, apperror.ErrExpiredToken
@@ -65,5 +86,16 @@ func (m *jwtMaker) ExtractToken(tokenString string) (*jwt.MapClaims, error) {
 	if !ok || !token.Valid {
 		return nil, apperror.ErrInvalidToken
 	}
+	if claims["type"] != expectedType {
+		return nil, apperror.ErrInvalidToken
+	}
 	return &claims, nil
+}
+
+func (m *jwtMaker) VerifyAccessToken(token string) (*jwt.MapClaims, error) {
+	return m.verifyToken(token, m.accessKey, "access")
+}
+
+func (m *jwtMaker) VerifyRefreshToken(token string) (*jwt.MapClaims, error) {
+	return m.verifyToken(token, m.refreshKey, "refresh")
 }
