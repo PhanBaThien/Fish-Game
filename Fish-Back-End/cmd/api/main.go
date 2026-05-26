@@ -31,7 +31,7 @@ func mustDuration(key string, fallback time.Duration) time.Duration {
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("⚠️ Không tìm thấy file .env, sử dụng biến hệ thống")
-	}
+	} 
 
 	db, err := database.InitDBWithAutomation(os.Getenv("DATABASE_URL"), "internal/scripts/sql/seed.sql")
 	if err != nil {

@@ -33,8 +33,8 @@ func mapToModelRefreshToken(r dbgen.RefreshToken) models.RefreshToken {
 		ID:        r.ID,
 		UserID:    r.UserID,
 		TokenHash: r.TokenHash,
-		ExpiresAt: r.ExpiresAt,
-		CreatedAt: r.CreatedAt,
+		ExpiresAt: r.ExpiresAt.Time,
+		CreatedAt: r.CreatedAt.Time,
 	}
 }
 

@@ -6,7 +6,6 @@ import (
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/domain"
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/models"
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/repository"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type RoomUsecase interface {
@@ -34,13 +33,16 @@ func (u *roomUsecase) GetByID(ctx context.Context, id int64) (*models.Room, erro
 }
 
 func (u *roomUsecase) Create(ctx context.Context, req *domain.CreateRoomRequest) (*models.Room, error) {
-	room := &models.Room{
-		Name:       req.Name,
-		MinBet:     req.MinBet,
-		MaxPlayers: req.MaxPlayers,
+	rtp := req.RTP
+	if rtp == 0 {
+		rtp = 0.95 // default RTP nếu không truyền vào
 	}
-	if req.Description != nil {
-		room.Description = pgtype.Text{String: *req.Description, Valid: true}
+	room := &models.Room{
+		Name:        req.Name,
+		MinBet:      req.MinBet,
+		MaxPlayers:  req.MaxPlayers,
+		Description: req.Description,
+		RTP:         rtp,
 	}
 	if err := u.roomRepo.Create(ctx, room); err != nil {
 		return nil, err
@@ -63,7 +65,10 @@ func (u *roomUsecase) Update(ctx context.Context, id int64, req *domain.UpdateRo
 		room.MaxPlayers = *req.MaxPlayers
 	}
 	if req.Description != nil {
-		room.Description = pgtype.Text{String: *req.Description, Valid: true}
+		room.Description = req.Description
+	}
+	if req.RTP != nil {
+		room.RTP = *req.RTP
 	}
 	if err := u.roomRepo.Update(ctx, room); err != nil {
 		return nil, err

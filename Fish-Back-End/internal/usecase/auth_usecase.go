@@ -125,7 +125,7 @@ func (u *authUsecase) RefreshToken(ctx context.Context, refreshToken string) (*d
 	if err != nil {
 		return nil, apperror.ErrInvalidToken
 	}
-	if time.Now().After(record.ExpiresAt.Time) {
+	if time.Now().After(record.ExpiresAt) {
 		_ = u.refreshTokenRepo.DeleteByHash(ctx, hashToken(refreshToken))
 		return nil, apperror.ErrExpiredToken
 	}

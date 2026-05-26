@@ -12,10 +12,8 @@ export interface Room {
   name: string
   min_bet: number
   max_players: number
-  description: {
-    String: string
-    Valid: boolean
-  }
+  description: string | null
+  rtp: number
   created_at: string
   updated_at: string
 }
@@ -72,4 +70,26 @@ export interface RegisterResponse {
   id: number
   username: string
   role_id: number
+}
+
+export interface Wallet {
+  user_id: number
+  balance: number
+  updated_at: string
+}
+
+export interface Transaction {
+  id: number
+  user_id: number
+  amount: number
+  type: 'earn' | 'spend'
+  description: string | null
+  created_at: string
+}
+
+export interface TransactionListResponse {
+  transactions: Transaction[]
+  total: number
+  limit: number
+  offset: number
 }

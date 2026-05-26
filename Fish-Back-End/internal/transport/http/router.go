@@ -6,9 +6,10 @@ import (
 )
 
 type Handlers struct {
-	Auth *AuthHandler
-	Room *RoomHandler
-	Fish *FishHandler
+	Auth   *AuthHandler
+	Room   *RoomHandler
+	Fish   *FishHandler
+	Wallet *WalletHandler
 }
 
 func SetupRouter(h Handlers) *gin.Engine {
@@ -28,6 +29,9 @@ func SetupRouter(h Handlers) *gin.Engine {
 		}
 		if h.Fish != nil {
 			h.Fish.RegisterRoutes(v1)
+		}
+		if h.Wallet != nil {
+			h.Wallet.RegisterRoutes(v1)
 		}
 	}
 

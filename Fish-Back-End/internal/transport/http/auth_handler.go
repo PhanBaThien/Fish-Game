@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/domain"
@@ -11,6 +12,10 @@ import (
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
+
+func isSecure() bool {
+	return os.Getenv("APP_ENV") == "production"
+}
 
 const refreshTokenCookie = "refresh_token"
 const refreshTokenCookiePath = "/api/v1/auth"
@@ -42,13 +47,13 @@ func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 
 func setRefreshCookie(c *gin.Context, token string, expiresAt int64) {
 	maxAge := int(time.Until(time.Unix(expiresAt, 0)).Seconds())
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(refreshTokenCookie, token, maxAge, refreshTokenCookiePath, "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie(refreshTokenCookie, token, maxAge, refreshTokenCookiePath, "", isSecure(), true)
 }
 
 func clearRefreshCookie(c *gin.Context) {
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(refreshTokenCookie, "", -1, refreshTokenCookiePath, "", false, true)
+	c.SetSameSite(http.SameSiteStrictMode)
+	c.SetCookie(refreshTokenCookie, "", -1, refreshTokenCookiePath, "", isSecure(), true)
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {

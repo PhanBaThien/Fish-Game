@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import LobbyPage from './pages/LobbyPage'
 import GamePage from './pages/GamePage'
+import WalletPage from './pages/WalletPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,6 +25,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/lobby" element={<LobbyPage />} />
             <Route path="/game/:roomId" element={<GamePage />} />
+            <Route path="/wallet" element={<WalletPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/lobby" replace />} />

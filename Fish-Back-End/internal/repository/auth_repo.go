@@ -37,8 +37,8 @@ func mapToModelUser(u dbgen.User) models.User {
 		Email:     u.Email,
 		Password:  u.Password,
 		RoleID:    u.RoleID,
-		CreatedAt: u.CreatedAt,
-		UpdatedAt: u.UpdatedAt,
+		CreatedAt: u.CreatedAt.Time,
+		UpdatedAt: u.UpdatedAt.Time,
 	}
 }
 
@@ -85,7 +85,7 @@ func (r *userPgRepo) Create(ctx context.Context, user *models.User) error {
 		return apperror.Wrap("repository", "userRepo.Create", err)
 	}
 	user.ID = res.ID
-	user.CreatedAt = res.CreatedAt
-	user.UpdatedAt = res.UpdatedAt
+	user.CreatedAt = res.CreatedAt.Time
+	user.UpdatedAt = res.UpdatedAt.Time
 	return nil
 }

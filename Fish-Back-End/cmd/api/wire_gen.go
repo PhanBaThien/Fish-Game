@@ -28,10 +28,15 @@ func InitializeApp(db *pgxpool.Pool, hasher utils.PasswordHasher, tokenMaker uti
 	fishUsecase := usecase.NewFishUsecase(fishRepository)
 	fishHandler := http.NewFishHandler(fishUsecase, tokenMaker)
 
+	walletRepository := repository.NewWalletRepository(db)
+	walletUsecase := usecase.NewWalletUsecase(walletRepository)
+	walletHandler := http.NewWalletHandler(walletUsecase, tokenMaker)
+
 	handlers := http.Handlers{
-		Auth: authHandler,
-		Room: roomHandler,
-		Fish: fishHandler,
+		Auth:   authHandler,
+		Room:   roomHandler,
+		Fish:   fishHandler,
+		Wallet: walletHandler,
 	}
 	return handlers, nil
 }

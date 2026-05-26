@@ -39,5 +39,7 @@ var (
 	ErrForbidden          = Newf("FORBIDDEN", http.StatusForbidden, "bạn không có quyền thực hiện thao tác này")
 	ErrRoomNotFound       = Newf("ROOM_NOT_FOUND", http.StatusNotFound, "không tìm thấy phòng")
 	ErrFishNotFound       = Newf("FISH_NOT_FOUND", http.StatusNotFound, "không tìm thấy cá")
-	ErrInternalServer     = Newf("INTERNAL_SERVER_ERROR", http.StatusInternalServerError, "lỗi máy chủ nội bộ")
+	ErrWalletNotFound      = Newf("WALLET_NOT_FOUND", http.StatusNotFound, "không tìm thấy ví")
+	ErrInsufficientBalance = Newf("INSUFFICIENT_BALANCE", http.StatusBadRequest, "số dư không đủ")
+	ErrInternalServer      = Newf("INTERNAL_SERVER_ERROR", http.StatusInternalServerError, "lỗi máy chủ nội bộ")
 )

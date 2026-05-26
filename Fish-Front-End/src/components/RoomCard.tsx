@@ -28,8 +28,8 @@ export default function RoomCard({ room }: RoomCardProps) {
           </span>
         </div>
 
-        {room.description?.Valid && room.description.String && (
-          <p className="text-white/50 text-sm mb-4 line-clamp-2">{room.description.String}</p>
+        {room.description && (
+          <p className="text-white/50 text-sm mb-4 line-clamp-2">{room.description}</p>
         )}
 
         <div className="grid grid-cols-2 gap-3">

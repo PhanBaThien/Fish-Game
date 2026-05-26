@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { roomsApi } from '../api/rooms'
 import { fishApi } from '../api/fish'
 import { useGameStore } from '../stores/gameStore'
+import { useWalletStore } from '../stores/walletStore'
 import GameCanvas from '../game/GameCanvas'
 
 export default function GamePage() {
@@ -12,6 +13,7 @@ export default function GamePage() {
   const roomId = Number(roomIdStr)
 
   const { coins, score, setCurrentRoom, resetGame } = useGameStore()
+  const { balance, fetchWallet } = useWalletStore()
 
   const {
     data: room,
@@ -34,18 +36,17 @@ export default function GamePage() {
 
   // Set current room in store
   useEffect(() => {
-    if (room) {
-      setCurrentRoom(room)
-    }
+    if (room) setCurrentRoom(room)
   }, [room, setCurrentRoom])
 
-  // Reset game state on mount
+  // Reset game + fetch wallet on mount
   useEffect(() => {
     resetGame()
+    fetchWallet()
     return () => {
       setCurrentRoom(null)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const isLoading = roomLoading || fishLoading
@@ -110,7 +111,7 @@ export default function GamePage() {
             </span>
           </div>
 
-          {/* Back button (pointer-events enabled) */}
+          {/* Back button */}
           <button
             className="pointer-events-auto px-4 py-2 rounded-xl bg-black/40 backdrop-blur border border-white/10 text-white/70 hover:text-white hover:border-white/30 text-sm font-medium transition-all flex items-center gap-1.5"
             onClick={() => navigate('/lobby')}
@@ -124,28 +125,37 @@ export default function GamePage() {
 
         {/* Bottom HUD */}
         <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between px-4 pb-4">
-          {/* Coins */}
+          {/* Wallet balance (real, server-synced) */}
           <div className="flex flex-col items-center gap-1 px-5 py-3 rounded-2xl bg-black/50 backdrop-blur border border-yellow-500/20">
             <span className="text-2xl">🪙</span>
-            <span className="text-yellow-400 font-extrabold text-2xl leading-none">
-              {coins.toLocaleString()}
+            <span className="text-yellow-400 font-extrabold text-2xl leading-none tabular-nums">
+              {balance !== null ? balance.toLocaleString() : '...'}
             </span>
-            <span className="text-white/40 text-xs uppercase tracking-wider">Coins</span>
+            <span className="text-white/40 text-xs uppercase tracking-wider">Ví</span>
           </div>
 
-          {/* Score */}
+          {/* Session earnings */}
+          <div className="flex flex-col items-center gap-1 px-5 py-3 rounded-2xl bg-black/50 backdrop-blur border border-emerald-500/20">
+            <span className="text-2xl">💰</span>
+            <span className="text-emerald-400 font-extrabold text-2xl leading-none tabular-nums">
+              +{coins.toLocaleString()}
+            </span>
+            <span className="text-white/40 text-xs uppercase tracking-wider">Ván này</span>
+          </div>
+
+          {/* Fish killed */}
           <div className="flex flex-col items-center gap-1 px-5 py-3 rounded-2xl bg-black/50 backdrop-blur border border-cyan-500/20">
             <span className="text-2xl">🎯</span>
-            <span className="text-cyan-400 font-extrabold text-2xl leading-none">
+            <span className="text-cyan-400 font-extrabold text-2xl leading-none tabular-nums">
               {score}
             </span>
-            <span className="text-white/40 text-xs uppercase tracking-wider">Fish</span>
+            <span className="text-white/40 text-xs uppercase tracking-wider">Cá bắn</span>
           </div>
 
-          {/* Min bet info */}
+          {/* Min bet */}
           <div className="flex flex-col items-center gap-1 px-5 py-3 rounded-2xl bg-black/50 backdrop-blur border border-teal-500/20">
-            <span className="text-2xl">💰</span>
-            <span className="text-teal-400 font-extrabold text-xl leading-none">
+            <span className="text-2xl">💎</span>
+            <span className="text-teal-400 font-extrabold text-xl leading-none tabular-nums">
               {room?.min_bet?.toLocaleString() ?? '...'}
             </span>
             <span className="text-white/40 text-xs uppercase tracking-wider">Min Bet</span>

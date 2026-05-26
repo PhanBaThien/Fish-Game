@@ -8,6 +8,7 @@ import (
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/repository/dbgen"
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/pkg/apperror"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -27,15 +28,33 @@ func NewRoomRepository(pool *pgxpool.Pool) RoomRepository {
 	return &roomPgRepo{queries: dbgen.New(pool)}
 }
 
+// pgtextToPtr chuyển pgtype.Text (nullable DB) → *string (Go chuẩn)
+func pgtextToPtr(t pgtype.Text) *string {
+	if !t.Valid {
+		return nil
+	}
+	s := t.String
+	return &s
+}
+
+// ptrToPgtext chuyển *string (Go chuẩn) → pgtype.Text (để ghi xuống DB)
+func ptrToPgtext(s *string) pgtype.Text {
+	if s == nil {
+		return pgtype.Text{Valid: false}
+	}
+	return pgtype.Text{String: *s, Valid: true}
+}
+
 func mapToModelRoom(r dbgen.Room) models.Room {
 	return models.Room{
 		ID:          r.ID,
 		Name:        r.Name,
 		MinBet:      r.MinBet,
 		MaxPlayers:  r.MaxPlayers,
-		Description: r.Description,
-		CreatedAt:   r.CreatedAt,
-		UpdatedAt:   r.UpdatedAt,
+		Description: pgtextToPtr(r.Description), // pgtype.Text → *string
+		RTP:         r.Rtp,
+		CreatedAt:   r.CreatedAt.Time,
+		UpdatedAt:   r.UpdatedAt.Time,
 	}
 }
 
@@ -68,7 +87,8 @@ func (r *roomPgRepo) Create(ctx context.Context, room *models.Room) error {
 		Name:        room.Name,
 		MinBet:      room.MinBet,
 		MaxPlayers:  room.MaxPlayers,
-		Description: room.Description,
+		Description: ptrToPgtext(room.Description),
+		Rtp:         room.RTP,
 	})
 	if err != nil {
 		return apperror.Wrap("repository", "roomRepo.Create", err)
@@ -83,7 +103,8 @@ func (r *roomPgRepo) Update(ctx context.Context, room *models.Room) error {
 		Name:        room.Name,
 		MinBet:      room.MinBet,
 		MaxPlayers:  room.MaxPlayers,
-		Description: room.Description,
+		Description: ptrToPgtext(room.Description),
+		Rtp:         room.RTP,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

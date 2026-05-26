@@ -8,6 +8,21 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Transaction struct {
+	ID          int64
+	UserID      int64
+	Amount      int64
+	Type        string
+	Description pgtype.Text
+	CreatedAt   pgtype.Timestamptz
+}
+
+type Wallet struct {
+	UserID    int64
+	Balance   int64
+	UpdatedAt pgtype.Timestamptz
+}
+
 type Fish struct {
 	ID               int32
 	Name             string
@@ -38,6 +53,7 @@ type Room struct {
 	MinBet      int64
 	MaxPlayers  int32
 	Description pgtype.Text
+	Rtp         float64
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
 }

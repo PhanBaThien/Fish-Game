@@ -35,8 +35,8 @@ func mapToModelFish(f dbgen.Fish) models.Fish {
 		RewardMultiplier: f.RewardMultiplier,
 		Speed:            f.Speed,
 		AssetPath:        f.AssetPath,
-		CreatedAt:        f.CreatedAt,
-		UpdatedAt:        f.UpdatedAt,
+		CreatedAt:        f.CreatedAt.Time,
+		UpdatedAt:        f.UpdatedAt.Time,
 	}
 }
 

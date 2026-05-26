@@ -12,9 +12,9 @@ import (
 )
 
 const createRoom = `-- name: CreateRoom :one
-INSERT INTO rooms (name, min_bet, max_players, description)
-VALUES ($1, $2, $3, $4)
-RETURNING id, name, min_bet, max_players, description, created_at, updated_at
+INSERT INTO rooms (name, min_bet, max_players, description, rtp)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, min_bet, max_players, description, rtp, created_at, updated_at
 `
 
 type CreateRoomParams struct {
@@ -22,6 +22,7 @@ type CreateRoomParams struct {
 	MinBet      int64
 	MaxPlayers  int32
 	Description pgtype.Text
+	Rtp         float64
 }
 
 func (q *Queries) CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, error) {
@@ -30,6 +31,7 @@ func (q *Queries) CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, e
 		arg.MinBet,
 		arg.MaxPlayers,
 		arg.Description,
+		arg.Rtp,
 	)
 	var i Room
 	err := row.Scan(
@@ -38,6 +40,7 @@ func (q *Queries) CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, e
 		&i.MinBet,
 		&i.MaxPlayers,
 		&i.Description,
+		&i.Rtp,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -58,7 +61,7 @@ func (q *Queries) DeleteRoom(ctx context.Context, id int64) (int64, error) {
 }
 
 const getRoomByID = `-- name: GetRoomByID :one
-SELECT id, name, min_bet, max_players, description, created_at, updated_at
+SELECT id, name, min_bet, max_players, description, rtp, created_at, updated_at
 FROM rooms
 WHERE id = $1
 `
@@ -72,6 +75,7 @@ func (q *Queries) GetRoomByID(ctx context.Context, id int64) (Room, error) {
 		&i.MinBet,
 		&i.MaxPlayers,
 		&i.Description,
+		&i.Rtp,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -79,7 +83,7 @@ func (q *Queries) GetRoomByID(ctx context.Context, id int64) (Room, error) {
 }
 
 const listRooms = `-- name: ListRooms :many
-SELECT id, name, min_bet, max_players, description, created_at, updated_at
+SELECT id, name, min_bet, max_players, description, rtp, created_at, updated_at
 FROM rooms
 ORDER BY min_bet ASC
 `
@@ -99,6 +103,7 @@ func (q *Queries) ListRooms(ctx context.Context) ([]Room, error) {
 			&i.MinBet,
 			&i.MaxPlayers,
 			&i.Description,
+			&i.Rtp,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -114,9 +119,9 @@ func (q *Queries) ListRooms(ctx context.Context) ([]Room, error) {
 
 const updateRoom = `-- name: UpdateRoom :one
 UPDATE rooms
-SET name = $1, min_bet = $2, max_players = $3, description = $4, updated_at = NOW()
-WHERE id = $5
-RETURNING id, name, min_bet, max_players, description, created_at, updated_at
+SET name = $1, min_bet = $2, max_players = $3, description = $4, rtp = $5, updated_at = NOW()
+WHERE id = $6
+RETURNING id, name, min_bet, max_players, description, rtp, created_at, updated_at
 `
 
 type UpdateRoomParams struct {
@@ -124,6 +129,7 @@ type UpdateRoomParams struct {
 	MinBet      int64
 	MaxPlayers  int32
 	Description pgtype.Text
+	Rtp         float64
 	ID          int64
 }
 
@@ -133,6 +139,7 @@ func (q *Queries) UpdateRoom(ctx context.Context, arg UpdateRoomParams) (Room, e
 		arg.MinBet,
 		arg.MaxPlayers,
 		arg.Description,
+		arg.Rtp,
 		arg.ID,
 	)
 	var i Room
@@ -142,6 +149,7 @@ func (q *Queries) UpdateRoom(ctx context.Context, arg UpdateRoomParams) (Room, e
 		&i.MinBet,
 		&i.MaxPlayers,
 		&i.Description,
+		&i.Rtp,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
