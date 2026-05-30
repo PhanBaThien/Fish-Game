@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS rooms (
     id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name          VARCHAR(100) NOT NULL,
-    min_bet       BIGINT       NOT NULL DEFAULT 0,
     max_players   INT          NOT NULL DEFAULT 4,
     description   TEXT,
     rtp           FLOAT        NOT NULL DEFAULT 0.95,
@@ -43,27 +42,34 @@ CREATE TABLE IF NOT EXISTS wallets (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Session chơi game: mỗi lần vào phòng = 1 session
+CREATE TABLE IF NOT EXISTS game_sessions (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id     BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    room_id     BIGINT      NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    shots_fired INT         NOT NULL DEFAULT 0,
+    fish_killed INT         NOT NULL DEFAULT 0,
+    total_spend BIGINT      NOT NULL DEFAULT 0,  -- tổng vàng đã chi (đạn)
+    total_earn  BIGINT      NOT NULL DEFAULT 0,  -- tổng vàng đã nhận (cá)
+    status      VARCHAR(20) NOT NULL DEFAULT 'active', -- active | finished
+    started_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ended_at    TIMESTAMPTZ
+);
+
+-- Lịch sử giao dịch:
+--   type = 'play'     → chơi game, có session_id, amount = earn - spend (có thể âm)
+--   type = 'deposit'  → nạp vàng, session_id NULL, amount > 0
+--   type = 'withdraw' → rút vàng, session_id NULL, amount < 0
 CREATE TABLE IF NOT EXISTS transactions (
     id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id     BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    session_id  BIGINT      REFERENCES game_sessions(id),
     amount      BIGINT      NOT NULL,
-    type        VARCHAR(20) NOT NULL,
+    type        VARCHAR(20) NOT NULL CHECK (type IN ('play', 'deposit', 'withdraw')),
     description TEXT,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Tự động tạo wallet khi user đăng ký
-CREATE OR REPLACE FUNCTION fn_create_wallet()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO wallets (user_id) VALUES (NEW.id);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE TRIGGER trg_create_wallet
-    AFTER INSERT ON users
-    FOR EACH ROW EXECUTE FUNCTION fn_create_wallet();
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -73,6 +79,6 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-INSERT INTO rooms (name, min_bet, max_players, rtp) VALUES ('Sảnh Tân Thủ', 10, 4, 0.95), ('Đại Dương Đại Gia', 1000, 4, 0.90);
+INSERT INTO rooms (name, max_players, rtp) VALUES ('Sảnh Tân Thủ', 4, 0.95), ('Đại Dương', 4, 0.90);
 INSERT INTO fishes (name, health, reward_multiplier, asset_path) VALUES ('Cá Con', 1, 2, '/assets/fish/small_fish.glb'), ('Cá Mập Boss', 500, 100, '/assets/fish/shark_boss.glb');
 INSERT INTO roles (role_name) VALUES ('player'), ('admin') ON CONFLICT DO NOTHING;

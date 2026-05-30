@@ -10,6 +10,7 @@ type Handlers struct {
 	Room   *RoomHandler
 	Fish   *FishHandler
 	Wallet *WalletHandler
+	WS     *WSHandler
 }
 
 func SetupRouter(h Handlers) *gin.Engine {
@@ -32,6 +33,9 @@ func SetupRouter(h Handlers) *gin.Engine {
 		}
 		if h.Wallet != nil {
 			h.Wallet.RegisterRoutes(v1)
+		}
+		if h.WS != nil {
+			h.WS.RegisterRoutes(v1)
 		}
 	}
 

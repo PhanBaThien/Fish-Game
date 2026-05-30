@@ -2,14 +2,28 @@ import { useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { useWalletStore } from '../stores/walletStore'
+import { authApi } from '../api/auth'
 
 export default function Navbar() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout } = useAuthStore()
+  const { user, accessToken, setAuth, logout } = useAuthStore()
   const { balance, loading, fetchWallet, reset: resetWallet } = useWalletStore()
 
-  // fetch balance một lần khi mount (nếu chưa có)
+  // Khôi phục user từ /me nếu có token nhưng chưa có user (sau refresh trang)
+  useEffect(() => {
+    if (accessToken && !user) {
+      authApi.me()
+        .then((u) => setAuth(u, accessToken))
+        .catch(() => {
+          // token hết hạn hoặc lỗi → logout
+          logout()
+          navigate('/login', { replace: true })
+        })
+    }
+  }, [accessToken, user, setAuth, logout, navigate])
+
+  // Fetch balance khi đã có user
   useEffect(() => {
     if (user && balance === null) {
       fetchWallet()

@@ -7,20 +7,23 @@ import type { Transaction } from '../types'
 
 const PAGE_SIZE = 10
 
+const TX_META = {
+  play:     { icon: '🎮', label: 'Chơi game',  color: 'bg-cyan-500/15'   },
+  deposit:  { icon: '💰', label: 'Nạp vàng',   color: 'bg-yellow-500/15' },
+  withdraw: { icon: '💸', label: 'Rút vàng',   color: 'bg-red-500/15'    },
+}
+
 function TxRow({ tx }: { tx: Transaction }) {
-  const isEarn = tx.type === 'earn'
+  const meta = TX_META[tx.type]
+  const isPositive = tx.amount >= 0
   return (
     <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/8 transition-colors">
       <div className="flex items-center gap-3">
-        <div
-          className={`w-9 h-9 rounded-full flex items-center justify-center text-lg shrink-0 ${
-            isEarn ? 'bg-yellow-500/15' : 'bg-red-500/15'
-          }`}
-        >
-          {isEarn ? '🪙' : '💸'}
+        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-lg shrink-0 ${meta.color}`}>
+          {meta.icon}
         </div>
         <div>
-          <p className="text-white/85 text-sm font-medium capitalize">{tx.type}</p>
+          <p className="text-white/85 text-sm font-medium">{meta.label}</p>
           {tx.description && (
             <p className="text-white/35 text-xs mt-0.5 truncate max-w-[200px]">{tx.description}</p>
           )}
@@ -36,13 +39,8 @@ function TxRow({ tx }: { tx: Transaction }) {
         </div>
       </div>
 
-      <span
-        className={`text-base font-bold tabular-nums ${
-          isEarn ? 'text-yellow-400' : 'text-red-400'
-        }`}
-      >
-        {isEarn ? '+' : '-'}
-        {Math.abs(tx.amount).toLocaleString()}
+      <span className={`text-base font-bold tabular-nums ${isPositive ? 'text-yellow-400' : 'text-red-400'}`}>
+        {isPositive ? '+' : ''}{tx.amount.toLocaleString()}
       </span>
     </div>
   )

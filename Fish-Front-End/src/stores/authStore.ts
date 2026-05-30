@@ -24,6 +24,8 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'fish-game-auth',
+      // Chỉ lưu accessToken vào localStorage, user không cần persist
+      partialize: (state) => ({ accessToken: state.accessToken }),
     },
   ),
 )

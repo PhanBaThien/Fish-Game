@@ -9,6 +9,25 @@ import (
 	"context"
 )
 
+const createWallet = `-- name: CreateWallet :one
+INSERT INTO wallets (user_id, balance)
+VALUES ($1, $2)
+ON CONFLICT (user_id) DO UPDATE SET user_id = EXCLUDED.user_id
+RETURNING user_id, balance, updated_at
+`
+
+type CreateWalletParams struct {
+	UserID  int64
+	Balance int64
+}
+
+func (q *Queries) CreateWallet(ctx context.Context, arg CreateWalletParams) (Wallet, error) {
+	row := q.db.QueryRow(ctx, createWallet, arg.UserID, arg.Balance)
+	var i Wallet
+	err := row.Scan(&i.UserID, &i.Balance, &i.UpdatedAt)
+	return i, err
+}
+
 const getWallet = `-- name: GetWallet :one
 SELECT user_id, balance, updated_at
 FROM wallets
@@ -17,20 +36,6 @@ WHERE user_id = $1
 
 func (q *Queries) GetWallet(ctx context.Context, userID int64) (Wallet, error) {
 	row := q.db.QueryRow(ctx, getWallet, userID)
-	var i Wallet
-	err := row.Scan(&i.UserID, &i.Balance, &i.UpdatedAt)
-	return i, err
-}
-
-const createWallet = `-- name: CreateWallet :one
-INSERT INTO wallets (user_id, balance)
-VALUES ($1, 0)
-ON CONFLICT (user_id) DO UPDATE SET user_id = EXCLUDED.user_id
-RETURNING user_id, balance, updated_at
-`
-
-func (q *Queries) CreateWallet(ctx context.Context, userID int64) (Wallet, error) {
-	row := q.db.QueryRow(ctx, createWallet, userID)
 	var i Wallet
 	err := row.Scan(&i.UserID, &i.Balance, &i.UpdatedAt)
 	return i, err
@@ -45,12 +50,12 @@ RETURNING user_id, balance, updated_at
 `
 
 type UpdateWalletBalanceParams struct {
-	Amount int64
-	UserID int64
+	Balance int64
+	UserID  int64
 }
 
 func (q *Queries) UpdateWalletBalance(ctx context.Context, arg UpdateWalletBalanceParams) (Wallet, error) {
-	row := q.db.QueryRow(ctx, updateWalletBalance, arg.Amount, arg.UserID)
+	row := q.db.QueryRow(ctx, updateWalletBalance, arg.Balance, arg.UserID)
 	var i Wallet
 	err := row.Scan(&i.UserID, &i.Balance, &i.UpdatedAt)
 	return i, err

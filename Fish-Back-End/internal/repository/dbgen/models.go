@@ -8,21 +8,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Transaction struct {
-	ID          int64
-	UserID      int64
-	Amount      int64
-	Type        string
-	Description pgtype.Text
-	CreatedAt   pgtype.Timestamptz
-}
-
-type Wallet struct {
-	UserID    int64
-	Balance   int64
-	UpdatedAt pgtype.Timestamptz
-}
-
 type Fish struct {
 	ID               int32
 	Name             string
@@ -32,6 +17,19 @@ type Fish struct {
 	AssetPath        string
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
+}
+
+type GameSession struct {
+	ID         int64
+	UserID     int64
+	RoomID     int64
+	ShotsFired int32
+	FishKilled int32
+	TotalSpend int64
+	TotalEarn  int64
+	Status     string
+	StartedAt  pgtype.Timestamptz
+	EndedAt    pgtype.Timestamptz
 }
 
 type RefreshToken struct {
@@ -50,12 +48,21 @@ type Role struct {
 type Room struct {
 	ID          int64
 	Name        string
-	MinBet      int64
 	MaxPlayers  int32
 	Description pgtype.Text
 	Rtp         float64
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
+}
+
+type Transaction struct {
+	ID          int64
+	UserID      int64
+	SessionID   pgtype.Int8
+	Amount      int64
+	Type        string
+	Description pgtype.Text
+	CreatedAt   pgtype.Timestamptz
 }
 
 type User struct {
@@ -65,5 +72,11 @@ type User struct {
 	Password  string
 	RoleID    int32
 	CreatedAt pgtype.Timestamptz
+	UpdatedAt pgtype.Timestamptz
+}
+
+type Wallet struct {
+	UserID    int64
+	Balance   int64
 	UpdatedAt pgtype.Timestamptz
 }

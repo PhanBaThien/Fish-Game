@@ -39,7 +39,6 @@ func (u *roomUsecase) Create(ctx context.Context, req *domain.CreateRoomRequest)
 	}
 	room := &models.Room{
 		Name:        req.Name,
-		MinBet:      req.MinBet,
 		MaxPlayers:  req.MaxPlayers,
 		Description: req.Description,
 		RTP:         rtp,
@@ -57,9 +56,6 @@ func (u *roomUsecase) Update(ctx context.Context, id int64, req *domain.UpdateRo
 	}
 	if req.Name != nil {
 		room.Name = *req.Name
-	}
-	if req.MinBet != nil {
-		room.MinBet = *req.MinBet
 	}
 	if req.MaxPlayers != nil {
 		room.MaxPlayers = *req.MaxPlayers

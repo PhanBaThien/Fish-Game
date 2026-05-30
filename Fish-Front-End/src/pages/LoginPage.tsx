@@ -2,17 +2,19 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { authApi } from '../api/auth'
+import { useWalletStore } from '../stores/walletStore'
 
 type Tab = 'login' | 'register'
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const setAuth = useAuthStore((s) => s.setAuth)
+  const { setAuth, setToken } = useAuthStore()
 
   const [activeTab, setActiveTab] = useState<Tab>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const fetchWallet = useWalletStore((s) => s.fetchWallet)
 
   // Login fields
   const [loginUsername, setLoginUsername] = useState('')
@@ -30,7 +32,13 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const res = await authApi.login({ username: loginUsername, password: loginPassword })
-      setAuth(res.user, res.access_token)
+      // Lưu token trước để apiClient có thể gọi /me
+      setToken(res.access_token)
+      // Lấy thông tin user qua /me (vì login chỉ trả access_token)
+      const user = await authApi.me()
+      setAuth(user, res.access_token)
+      // Fetch wallet ngay sau login để Navbar hiển thị balance
+      fetchWallet()
       navigate('/lobby', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')

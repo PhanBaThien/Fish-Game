@@ -11,14 +11,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countTransactionsByUserID = `-- name: CountTransactionsByUserID :one
+SELECT COUNT(*) FROM transactions WHERE user_id = $1
+`
+
+func (q *Queries) CountTransactionsByUserID(ctx context.Context, userID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countTransactionsByUserID, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createTransaction = `-- name: CreateTransaction :one
-INSERT INTO transactions (user_id, amount, type, description)
-VALUES ($1, $2, $3, $4)
-RETURNING id, user_id, amount, type, description, created_at
+INSERT INTO transactions (user_id, session_id, amount, type, description)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, user_id, session_id, amount, type, description, created_at
 `
 
 type CreateTransactionParams struct {
 	UserID      int64
+	SessionID   pgtype.Int8
 	Amount      int64
 	Type        string
 	Description pgtype.Text
@@ -27,6 +39,7 @@ type CreateTransactionParams struct {
 func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error) {
 	row := q.db.QueryRow(ctx, createTransaction,
 		arg.UserID,
+		arg.SessionID,
 		arg.Amount,
 		arg.Type,
 		arg.Description,
@@ -35,6 +48,7 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
+		&i.SessionID,
 		&i.Amount,
 		&i.Type,
 		&i.Description,
@@ -44,7 +58,7 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 }
 
 const listTransactionsByUserID = `-- name: ListTransactionsByUserID :many
-SELECT id, user_id, amount, type, description, created_at
+SELECT id, user_id, session_id, amount, type, description, created_at
 FROM transactions
 WHERE user_id = $1
 ORDER BY created_at DESC
@@ -69,6 +83,7 @@ func (q *Queries) ListTransactionsByUserID(ctx context.Context, arg ListTransact
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
+			&i.SessionID,
 			&i.Amount,
 			&i.Type,
 			&i.Description,
@@ -82,15 +97,4 @@ func (q *Queries) ListTransactionsByUserID(ctx context.Context, arg ListTransact
 		return nil, err
 	}
 	return items, nil
-}
-
-const countTransactionsByUserID = `-- name: CountTransactionsByUserID :one
-SELECT COUNT(*) FROM transactions WHERE user_id = $1
-`
-
-func (q *Queries) CountTransactionsByUserID(ctx context.Context, userID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, countTransactionsByUserID, userID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
 }

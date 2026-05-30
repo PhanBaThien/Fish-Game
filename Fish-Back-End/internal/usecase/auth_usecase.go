@@ -24,6 +24,7 @@ type AuthUsecase interface {
 type authUsecase struct {
 	userRepo         repository.UserRepository
 	refreshTokenRepo repository.RefreshTokenRepository
+	walletRepo       repository.WalletRepository
 	hasher           utils.PasswordHasher
 	tokenMaker       utils.TokenMaker
 }
@@ -31,12 +32,14 @@ type authUsecase struct {
 func NewAuthUsecase(
 	repo repository.UserRepository,
 	refreshTokenRepo repository.RefreshTokenRepository,
+	walletRepo repository.WalletRepository,
 	hasher utils.PasswordHasher,
 	token utils.TokenMaker,
 ) AuthUsecase {
 	return &authUsecase{
 		userRepo:         repo,
 		refreshTokenRepo: refreshTokenRepo,
+		walletRepo:       walletRepo,
 		hasher:           hasher,
 		tokenMaker:       token,
 	}
@@ -102,6 +105,10 @@ func (u *authUsecase) Register(ctx context.Context, req *domain.RegisterRequest)
 	}
 	if err = u.userRepo.Create(ctx, user); err != nil {
 		return nil, err
+	}
+
+	if _, err = u.walletRepo.GetOrCreate(ctx, user.ID, 5000); err != nil {
+		return nil, apperror.Wrap("usecase", "authUsecase.Register.CreateWallet", err)
 	}
 
 	return &domain.RegisterResponse{

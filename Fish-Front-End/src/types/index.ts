@@ -10,7 +10,6 @@ export interface User {
 export interface Room {
   id: number
   name: string
-  min_bet: number
   max_players: number
   description: string | null
   rtp: number
@@ -78,11 +77,25 @@ export interface Wallet {
   updated_at: string
 }
 
+export interface GameSession {
+  id: number
+  user_id: number
+  room_id: number
+  shots_fired: number
+  fish_killed: number
+  total_spend: number
+  total_earn: number
+  status: 'active' | 'finished'
+  started_at: string
+  ended_at: string | null
+}
+
 export interface Transaction {
   id: number
   user_id: number
-  amount: number
-  type: 'earn' | 'spend'
+  session_id: number | null
+  amount: number              // net: dương = có lời, âm = lỗ; deposit > 0, withdraw < 0
+  type: 'play' | 'deposit' | 'withdraw'
   description: string | null
   created_at: string
 }

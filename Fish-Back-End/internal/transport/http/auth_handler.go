@@ -105,8 +105,8 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 }
 
 func (h *AuthHandler) Me(c *gin.Context) {
-	userID, _ := c.Get("user_id")
-	data, err := h.authUsecase.Me(c.Request.Context(), userID.(int64))
+	userID := c.MustGet("user_id").(int64)
+	data, err := h.authUsecase.Me(c.Request.Context(), userID)
 	if err != nil {
 		Fail(c, err)
 		return

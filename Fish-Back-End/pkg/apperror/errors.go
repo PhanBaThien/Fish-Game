@@ -41,5 +41,7 @@ var (
 	ErrFishNotFound       = Newf("FISH_NOT_FOUND", http.StatusNotFound, "không tìm thấy cá")
 	ErrWalletNotFound      = Newf("WALLET_NOT_FOUND", http.StatusNotFound, "không tìm thấy ví")
 	ErrInsufficientBalance = Newf("INSUFFICIENT_BALANCE", http.StatusBadRequest, "số dư không đủ")
+	ErrSessionNotFound     = Newf("SESSION_NOT_FOUND", http.StatusNotFound, "không tìm thấy phiên chơi")
+	ErrSessionAlreadyEnded = Newf("SESSION_ALREADY_ENDED", http.StatusBadRequest, "phiên chơi đã kết thúc")
 	ErrInternalServer      = Newf("INTERNAL_SERVER_ERROR", http.StatusInternalServerError, "lỗi máy chủ nội bộ")
 )

@@ -5,8 +5,9 @@ import type { Fish } from '../../types'
 export interface GameSceneOptions {
   canvas: HTMLCanvasElement
   fishList: Fish[]
-  onFishKilled?: (rewardMultiplier: number) => void
+  onFishKilled?: (fishId: number, rewardMultiplier: number) => void
   onScore?: (points: number) => void
+  onShot?: (x: number, y: number, angle: number) => boolean // trả false → không bắn đạn
 }
 
 interface Particle {
@@ -93,7 +94,7 @@ export class GameScene {
 
   private handleFishDeath(fish: FishEntity) {
     this.spawnParticles(fish.x, fish.y, fish.size)
-    this.options.onFishKilled?.(fish.fishData.reward_multiplier)
+    this.options.onFishKilled?.(fish.fishData.id, fish.fishData.reward_multiplier)
     this.options.onScore?.(10)
 
     const idx = this.fishEntities.indexOf(fish)
@@ -152,7 +153,11 @@ export class GameScene {
     const tipDist = 38
     const sx = cx + Math.cos(this.cannonAngle) * tipDist
     const sy = cy + Math.sin(this.cannonAngle) * tipDist
-    this.bullets.push(new BulletEntity(sx, sy, tx, ty))
+    // onShot trả false (không đủ tiền) → không hiển thị đạn
+    const allowed = this.options.onShot?.(tx, ty, this.cannonAngle) ?? true
+    if (allowed) {
+      this.bullets.push(new BulletEntity(sx, sy, tx, ty))
+    }
   }
 
   private onResize = () => {

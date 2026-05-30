@@ -1,5 +1,5 @@
 import { apiClient, extractData } from './client'
-import type { Wallet, TransactionListResponse } from '../types'
+import type { Wallet, GameSession, TransactionListResponse } from '../types'
 
 export const walletApi = {
   getWallet: async (): Promise<Wallet> => {
@@ -14,18 +14,45 @@ export const walletApi = {
     return extractData(res)
   },
 
-  earn: async (amount: number, description?: string): Promise<Wallet> => {
-    const res = await apiClient.post<{ data: Wallet; error: null }>('/wallet/earn', {
+  deposit: async (amount: number, description?: string): Promise<Wallet> => {
+    const res = await apiClient.post<{ data: Wallet; error: null }>('/wallet/deposit', {
       amount,
       description: description ?? null,
     })
     return extractData(res)
   },
 
-  spend: async (amount: number, description?: string): Promise<Wallet> => {
-    const res = await apiClient.post<{ data: Wallet; error: null }>('/wallet/spend', {
+  withdraw: async (amount: number, description?: string): Promise<Wallet> => {
+    const res = await apiClient.post<{ data: Wallet; error: null }>('/wallet/withdraw', {
       amount,
       description: description ?? null,
+    })
+    return extractData(res)
+  },
+
+  startSession: async (roomId: number): Promise<GameSession> => {
+    const res = await apiClient.post<{ data: GameSession; error: null }>('/wallet/session/start', {
+      room_id: roomId,
+    })
+    return extractData(res)
+  },
+
+  endSession: async (params: {
+    sessionId: number
+    shotsFired: number
+    fishKilled: number
+    totalSpend: number
+    totalEarn: number
+  }): Promise<{ session: GameSession; wallet: Wallet }> => {
+    const res = await apiClient.post<{
+      data: { session: GameSession; wallet: Wallet }
+      error: null
+    }>('/wallet/session/end', {
+      session_id:  params.sessionId,
+      shots_fired: params.shotsFired,
+      fish_killed: params.fishKilled,
+      total_spend: params.totalSpend,
+      total_earn:  params.totalEarn,
     })
     return extractData(res)
   },

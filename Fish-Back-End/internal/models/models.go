@@ -20,10 +20,9 @@ type Role struct {
 type Room struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`
-	MinBet      int64     `json:"min_bet"`
 	MaxPlayers  int32     `json:"max_players"`
 	Description *string   `json:"description"`
-	RTP 	    float64   `json:"rtp"`
+	RTP         float64   `json:"rtp"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -48,10 +47,24 @@ type Wallet struct {
 type Transaction struct {
 	ID          int64     `json:"id"`
 	UserID      int64     `json:"user_id"`
-	Amount      int64     `json:"amount"`   // dương = nhận, âm = tiêu
+	SessionID   *int64    `json:"session_id"` // nil = giao dịch ngoài session
+	Amount      int64     `json:"amount"`     // dương = nhận, âm = tiêu
 	Type        string    `json:"type"`
 	Description *string   `json:"description"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type GameSession struct {
+	ID         int64      `json:"id"`
+	UserID     int64      `json:"user_id"`
+	RoomID     int64      `json:"room_id"`
+	ShotsFired int32      `json:"shots_fired"`
+	FishKilled int32      `json:"fish_killed"`
+	TotalSpend int64      `json:"total_spend"`
+	TotalEarn  int64      `json:"total_earn"`
+	Status     string     `json:"status"` // active | finished
+	StartedAt  time.Time  `json:"started_at"`
+	EndedAt    *time.Time `json:"ended_at"` // nil khi đang active
 }
 
 type RefreshToken struct {

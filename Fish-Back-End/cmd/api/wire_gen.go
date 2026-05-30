@@ -10,6 +10,7 @@ import (
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/repository"
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/transport/http"
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/usecase"
+	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/internal/ws"
 	"github.com/PhanBaThien/Fish-Game/Fish-Back-End/pkg/utils"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -17,7 +18,8 @@ import (
 func InitializeApp(db *pgxpool.Pool, hasher utils.PasswordHasher, tokenMaker utils.TokenMaker) (http.Handlers, error) {
 	userRepository := repository.NewUserRepository(db)
 	refreshTokenRepository := repository.NewRefreshTokenRepository(db)
-	authUsecase := usecase.NewAuthUsecase(userRepository, refreshTokenRepository, hasher, tokenMaker)
+	walletRepository := repository.NewWalletRepository(db)
+	authUsecase := usecase.NewAuthUsecase(userRepository, refreshTokenRepository, walletRepository, hasher, tokenMaker)
 	authHandler := http.NewAuthHandler(authUsecase, tokenMaker)
 
 	roomRepository := repository.NewRoomRepository(db)
@@ -28,15 +30,18 @@ func InitializeApp(db *pgxpool.Pool, hasher utils.PasswordHasher, tokenMaker uti
 	fishUsecase := usecase.NewFishUsecase(fishRepository)
 	fishHandler := http.NewFishHandler(fishUsecase, tokenMaker)
 
-	walletRepository := repository.NewWalletRepository(db)
 	walletUsecase := usecase.NewWalletUsecase(walletRepository)
 	walletHandler := http.NewWalletHandler(walletUsecase, tokenMaker)
+
+	hub := ws.NewHub()
+	wsHandler := http.NewWSHandler(hub, walletUsecase, roomUsecase, fishUsecase, tokenMaker)
 
 	handlers := http.Handlers{
 		Auth:   authHandler,
 		Room:   roomHandler,
 		Fish:   fishHandler,
 		Wallet: walletHandler,
+		WS:     wsHandler,
 	}
 	return handlers, nil
 }

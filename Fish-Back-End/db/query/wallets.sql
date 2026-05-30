@@ -5,7 +5,7 @@ WHERE user_id = $1;
 
 -- name: CreateWallet :one
 INSERT INTO wallets (user_id, balance)
-VALUES ($1, 0)
+VALUES ($1, $2)
 ON CONFLICT (user_id) DO UPDATE SET user_id = EXCLUDED.user_id
 RETURNING user_id, balance, updated_at;
 

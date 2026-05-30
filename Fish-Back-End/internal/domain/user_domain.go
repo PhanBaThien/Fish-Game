@@ -9,10 +9,10 @@ type LoginRequest struct {
 
 type LoginResponse struct {
 	AccessToken           string      `json:"access_token"`
-	AccessTokenExpiresAt  int64       `json:"access_token_expires_at"`
+	AccessTokenExpiresAt  int64       `json:"-"` // ẩn khỏi response
 	RefreshToken          string      `json:"-"` // trả qua HttpOnly cookie, không expose trong JSON
-	RefreshTokenExpiresAt int64       `json:"-"`
-	User                  models.User `json:"user"`
+	RefreshTokenExpiresAt int64       `json:"-"` // ẩn khỏi response
+	User                  models.User `json:"-"` // ẩn khỏi response
 }
 
 type RegisterRequest struct {

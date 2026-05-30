@@ -32,21 +32,12 @@ export default function RoomCard({ room }: RoomCardProps) {
           <p className="text-white/50 text-sm mb-4 line-clamp-2">{room.description}</p>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col">
-            <span className="text-white/40 text-xs uppercase tracking-wider mb-1">Min Bet</span>
-            <span className="text-cyan-400 font-bold text-lg">
-              {room.min_bet.toLocaleString()}
-              <span className="text-xs text-cyan-400/70 ml-1">coins</span>
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-white/40 text-xs uppercase tracking-wider mb-1">Max Players</span>
-            <span className="text-teal-400 font-bold text-lg">
-              {room.max_players}
-              <span className="text-xs text-teal-400/70 ml-1">players</span>
-            </span>
-          </div>
+        <div className="flex flex-col">
+          <span className="text-white/40 text-xs uppercase tracking-wider mb-1">Max Players</span>
+          <span className="text-teal-400 font-bold text-lg">
+            {room.max_players}
+            <span className="text-xs text-teal-400/70 ml-1">players</span>
+          </span>
         </div>
       </div>
 

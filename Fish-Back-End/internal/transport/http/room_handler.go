@@ -16,7 +16,6 @@ type RoomHandler struct {
 	tokenMaker  utils.TokenMaker
 }
 
-// alias để tránh lặp tên package
 type RoomUsecase = usecase.RoomUsecase
 
 func NewRoomHandler(u usecase.RoomUsecase, m utils.TokenMaker) *RoomHandler {

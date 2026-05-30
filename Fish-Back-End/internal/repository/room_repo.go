@@ -49,9 +49,8 @@ func mapToModelRoom(r dbgen.Room) models.Room {
 	return models.Room{
 		ID:          r.ID,
 		Name:        r.Name,
-		MinBet:      r.MinBet,
 		MaxPlayers:  r.MaxPlayers,
-		Description: pgtextToPtr(r.Description), // pgtype.Text → *string
+		Description: pgtextToPtr(r.Description),
 		RTP:         r.Rtp,
 		CreatedAt:   r.CreatedAt.Time,
 		UpdatedAt:   r.UpdatedAt.Time,
@@ -85,7 +84,6 @@ func (r *roomPgRepo) GetByID(ctx context.Context, id int64) (*models.Room, error
 func (r *roomPgRepo) Create(ctx context.Context, room *models.Room) error {
 	row, err := r.queries.CreateRoom(ctx, dbgen.CreateRoomParams{
 		Name:        room.Name,
-		MinBet:      room.MinBet,
 		MaxPlayers:  room.MaxPlayers,
 		Description: ptrToPgtext(room.Description),
 		Rtp:         room.RTP,
@@ -101,7 +99,6 @@ func (r *roomPgRepo) Update(ctx context.Context, room *models.Room) error {
 	row, err := r.queries.UpdateRoom(ctx, dbgen.UpdateRoomParams{
 		ID:          room.ID,
 		Name:        room.Name,
-		MinBet:      room.MinBet,
 		MaxPlayers:  room.MaxPlayers,
 		Description: ptrToPgtext(room.Description),
 		Rtp:         room.RTP,
