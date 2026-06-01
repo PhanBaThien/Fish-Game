@@ -22,6 +22,7 @@ export interface Fish {
   name: string
   health: number
   reward_multiplier: number
+  base_prob: number
   speed: number
   asset_path: string
   created_at: string

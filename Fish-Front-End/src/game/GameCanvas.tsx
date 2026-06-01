@@ -5,17 +5,19 @@ import type { Fish, Room } from '../types'
 interface GameCanvasProps {
   room: Room
   fishList: Fish[]
-  onFishKilled: (fishId: number, rewardMultiplier: number) => void
+  onHitFish: (fishId: number, instanceId: string) => void
   onShot: (x: number, y: number, angle: number) => boolean
+  // Ref mà parent gán để gọi confirmFishDeath từ bên ngoài
+  confirmDeathRef: { current: ((instanceId: string) => void) | null }
 }
 
-export default function GameCanvas({ room: _room, fishList, onFishKilled, onShot }: GameCanvasProps) {
+export default function GameCanvas({ room, fishList, onHitFish, onShot, confirmDeathRef }: GameCanvasProps) {
   const canvasRef    = useRef<HTMLCanvasElement>(null)
   const gameSceneRef = useRef<GameScene | null>(null)
 
-  const handleFishKilled = useCallback(
-    (fishId: number, rewardMultiplier: number) => onFishKilled(fishId, rewardMultiplier),
-    [onFishKilled],
+  const handleHitFish = useCallback(
+    (fishId: number, instanceId: string) => onHitFish(fishId, instanceId),
+    [onHitFish],
   )
 
   const handleShot = useCallback(
@@ -28,20 +30,25 @@ export default function GameCanvas({ room: _room, fishList, onFishKilled, onShot
 
     const timeout = setTimeout(() => {
       if (!canvasRef.current) return
-      gameSceneRef.current = new GameScene({
+      const scene = new GameScene({
         canvas: canvasRef.current,
         fishList,
-        onFishKilled: handleFishKilled,
+        roomRtp: room.rtp,
+        onHitFish: handleHitFish,
         onShot: handleShot,
       })
+      gameSceneRef.current = scene
+      // Expose confirmFishDeath về parent qua ref
+      confirmDeathRef.current = (instanceId) => scene.confirmFishDeath(instanceId)
     }, 50)
 
     return () => {
       clearTimeout(timeout)
       gameSceneRef.current?.dispose()
       gameSceneRef.current = null
+      confirmDeathRef.current = null
     }
-  }, [fishList, handleFishKilled, handleShot])
+  }, [fishList, handleHitFish, handleShot, confirmDeathRef])
 
   return (
     <canvas

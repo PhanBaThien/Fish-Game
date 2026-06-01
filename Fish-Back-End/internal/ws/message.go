@@ -4,18 +4,18 @@ import "encoding/json"
 
 // ── Message types Client → Server ────────────────────────────────────────────
 const (
-	MsgJoinRoom   = "join_room"   // vào phòng
-	MsgShoot      = "shoot"       // bắn đạn
-	MsgFishKilled = "fish_killed" // cá bị hạ (client báo)
-	MsgLeaveRoom  = "leave_room"  // thoát phòng
-	MsgPing       = "ping"
+	MsgJoinRoom  = "join_room"  // vào phòng
+	MsgShoot     = "shoot"      // bắn đạn (trừ tiền)
+	MsgHitFish   = "hit_fish"   // đạn chạm cá (server roll xác suất)
+	MsgLeaveRoom = "leave_room" // thoát phòng
+	MsgPing      = "ping"
 )
 
 // ── Message types Server → Client ────────────────────────────────────────────
 const (
 	MsgSessionStarted = "session_started" // session tạo thành công
 	MsgShootAck       = "shoot_ack"       // server nhận shot, trả stats
-	MsgEarnAck        = "earn_ack"        // server xác nhận cá chết, trả balance
+	MsgHitResult      = "hit_result"      // kết quả roll xác suất (killed hay không)
 	MsgSessionEnded   = "session_ended"   // kết thúc ván, trả wallet
 	MsgError          = "error"
 	MsgPong           = "pong"
@@ -46,9 +46,9 @@ type ShootPayload struct {
 	BetAmount int64   `json:"bet_amount"` // tiền đặt cược cho viên đạn này
 }
 
-type FishKilledPayload struct {
-	FishID           int32 `json:"fish_id"`
-	RewardMultiplier int32 `json:"reward_multiplier"`
+type HitFishPayload struct {
+	FishID     int32  `json:"fish_id"`
+	InstanceID string `json:"instance_id"` // ID của cá cụ thể phía client
 }
 
 // ── Server → Client payloads ─────────────────────────────────────────────────
@@ -63,11 +63,14 @@ type ShootAckPayload struct {
 	Balance    int64 `json:"balance"` // balance ước tính sau khi trừ tiền đạn
 }
 
-type EarnAckPayload struct {
-	Amount     int64 `json:"amount"`      // vàng kiếm được từ con cá này
-	Balance    int64 `json:"balance"`     // balance ước tính (sẽ confirm lúc EndSession)
-	TotalEarn  int64 `json:"total_earn"`  // tổng earn ván này
-	FishKilled int32 `json:"fish_killed"` // tổng cá bắn hạ ván này
+type HitResultPayload struct {
+	Killed     bool   `json:"killed"`
+	FishID     int32  `json:"fish_id"`
+	InstanceID string `json:"instance_id"`
+	Amount     int64  `json:"amount,omitempty"` // reward (chỉ khi killed=true)
+	Balance    int64  `json:"balance"`
+	TotalEarn  int64  `json:"total_earn"`
+	FishKilled int32  `json:"fish_killed"`
 }
 
 type SessionEndedPayload struct {

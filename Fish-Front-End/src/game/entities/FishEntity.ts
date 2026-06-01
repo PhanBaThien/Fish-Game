@@ -10,11 +10,18 @@ const PALETTE = [
   { body: '#f87171', shade: '#b91c1c' },
 ]
 
+let _instanceCounter = 0
+
 export class FishEntity {
   public x: number
   public y: number
   public isDead = false
-  public currentHealth: number
+  public readonly instanceId: string
+  public readonly killProb: number   // xác suất kill mỗi lần bắn trúng (đã nhân RTP)
+  public isFlashing = false
+  private flashTimer = 0
+  private shakeX = 0                // rung lắc khi bị trúng
+  private shakeY = 0
   public readonly fishData: Fish
 
   private direction: 1 | -1
@@ -24,13 +31,12 @@ export class FishEntity {
   private speed: number
   private time: number
   private color: { body: string; shade: string }
-  readonly size: number // hit-radius
+  readonly size: number
 
-  public onDeath?: (fish: FishEntity) => void
-
-  constructor(fishData: Fish, canvasW: number, canvasH: number, index: number) {
+  constructor(fishData: Fish, canvasW: number, canvasH: number, index: number, killProb: number) {
     this.fishData = fishData
-    this.currentHealth = fishData.health
+    this.instanceId = `fish_${++_instanceCounter}`
+    this.killProb = killProb
 
     this.direction = index % 2 === 0 ? 1 : -1
     this.baseY = 90 + (index % 8) * ((canvasH - 200) / 8) + (Math.random() - 0.5) * 20
@@ -49,15 +55,20 @@ export class FishEntity {
     this.size = Math.min(55, Math.max(20, 18 + Math.log(fishData.health + 1) * 9))
   }
 
-  takeDamage(amount: number): boolean {
-    if (this.isDead) return false
-    this.currentHealth -= amount
-    if (this.currentHealth <= 0) {
-      this.isDead = true
-      this.onDeath?.(this)
-      return true
-    }
-    return false
+  // Bật flash + shake — không set isDead (server mới quyết định)
+  takeDamage(_amount: number) {
+    if (this.isDead) return
+    this.isFlashing = true
+    this.flashTimer = 0.20
+    // rung ngẫu nhiên nhỏ
+    this.shakeX = (Math.random() - 0.5) * 6
+    this.shakeY = (Math.random() - 0.5) * 4
+  }
+
+  // Gọi khi server xác nhận cá đã chết
+  confirmDeath() {
+    if (this.isDead) return
+    this.isDead = true
   }
 
   update(dt: number, canvasW: number, canvasH: number) {
@@ -65,6 +76,19 @@ export class FishEntity {
     this.time += dt
     this.x += this.direction * this.speed * dt
     this.y = this.baseY + Math.sin(this.time * this.frequency) * this.amplitude
+
+    // Flash + shake timer
+    if (this.isFlashing) {
+      this.flashTimer -= dt
+      // shake tắt dần nhanh hơn flash
+      this.shakeX *= 0.7
+      this.shakeY *= 0.7
+      if (this.flashTimer <= 0) {
+        this.isFlashing = false
+        this.shakeX = 0
+        this.shakeY = 0
+      }
+    }
 
     if (this.direction === 1 && this.x > canvasW + 100) {
       this.x = -80
@@ -81,7 +105,20 @@ export class FishEntity {
     if (this.isDead) return
 
     ctx.save()
-    ctx.translate(this.x, this.y)
+    ctx.translate(this.x + this.shakeX, this.y + this.shakeY)
+
+    // Flash effect: lớp trắng phủ lên cá khi bị trúng đạn
+    if (this.isFlashing) {
+      const alpha = (this.flashTimer / 0.20) * 0.55
+      ctx.save()
+      ctx.globalAlpha = alpha
+      ctx.beginPath()
+      ctx.ellipse(0, 0, this.size * 1.1, this.size * 0.65, 0, 0, Math.PI * 2)
+      ctx.fillStyle = '#ffffff'
+      ctx.fill()
+      ctx.restore()
+    }
+
     if (this.direction === -1) ctx.scale(-1, 1)
 
     const s = this.size
@@ -144,29 +181,73 @@ export class FishEntity {
 
     ctx.restore()
 
-    // Health bar (un-flipped world space)
-    this.drawHealthBar(ctx)
+    // Label tỷ lệ (world space, không bị ảnh hưởng bởi flip/translate)
+    this.drawStatsLabel(ctx)
   }
 
-  private drawHealthBar(ctx: CanvasRenderingContext2D) {
-    const ratio = Math.max(0, this.currentHealth / this.fishData.health)
-    const barW = this.size * 2.2
-    const barH = 6
-    const bx = this.x - barW / 2
-    const by = this.y - this.size - 16
+  private drawStatsLabel(ctx: CanvasRenderingContext2D) {
+    const cx = this.x + this.shakeX
+    const cy = this.y + this.shakeY - this.size - 10
 
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.45)'
-    ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2)
+    const mult    = this.fishData.reward_multiplier
+    const pct     = (this.killProb * 100)
+    const probStr = pct < 0.1
+      ? pct.toFixed(3) + '%'
+      : pct < 1
+      ? pct.toFixed(2) + '%'
+      : pct.toFixed(1) + '%'
 
-    // Track
-    ctx.fillStyle = '#450a0a'
-    ctx.fillRect(bx, by, barW, barH)
+    // Màu xác suất: xanh → vàng → cam → đỏ tuỳ theo độ khó
+    const probColor = pct > 10 ? '#4ade80'
+      : pct > 1   ? '#facc15'
+      : pct > 0.1 ? '#fb923c'
+      :              '#f87171'
 
-    // Fill — green → yellow → red
-    const r = Math.round((1 - ratio) * 255)
-    const g = Math.round(ratio * 210)
-    ctx.fillStyle = `rgb(${r},${g},20)`
-    ctx.fillRect(bx, by, barW * ratio, barH)
+    ctx.save()
+    ctx.font = 'bold 11px system-ui, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    const multText = `×${mult}`
+    const probText = probStr
+
+    const multW  = ctx.measureText(multText).width + 10
+    const probW  = ctx.measureText(probText).width + 10
+    const gap    = 4
+    const totalW = multW + gap + probW
+    const h      = 16
+    const r      = 4
+
+    const startX = cx - totalW / 2
+
+    // Nền multiplier badge
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'
+    this._roundRect(ctx, startX, cy - h / 2, multW, h, r)
+    ctx.fill()
+    ctx.fillStyle = '#e2e8f0'
+    ctx.fillText(multText, startX + multW / 2, cy)
+
+    // Nền prob badge
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'
+    this._roundRect(ctx, startX + multW + gap, cy - h / 2, probW, h, r)
+    ctx.fill()
+    ctx.fillStyle = probColor
+    ctx.fillText(probText, startX + multW + gap + probW / 2, cy)
+
+    ctx.restore()
+  }
+
+  private _roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+    ctx.beginPath()
+    ctx.moveTo(x + r, y)
+    ctx.lineTo(x + w - r, y)
+    ctx.arcTo(x + w, y, x + w, y + r, r)
+    ctx.lineTo(x + w, y + h - r)
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r)
+    ctx.lineTo(x + r, y + h)
+    ctx.arcTo(x, y + h, x, y + h - r, r)
+    ctx.lineTo(x, y + r)
+    ctx.arcTo(x, y, x + r, y, r)
+    ctx.closePath()
   }
 }

@@ -5,7 +5,8 @@ import type { Fish } from '../../types'
 export interface GameSceneOptions {
   canvas: HTMLCanvasElement
   fishList: Fish[]
-  onFishKilled?: (fishId: number, rewardMultiplier: number) => void
+  roomRtp: number                                           // RTP phòng dạng decimal (0.0–1.0)
+  onHitFish?: (fishId: number, instanceId: string) => void // đạn chạm cá → gửi lên server
   onScore?: (points: number) => void
   onShot?: (x: number, y: number, angle: number) => boolean // trả false → không bắn đạn
 }
@@ -87,26 +88,35 @@ export class GameScene {
   }
 
   addFish(data: Fish, index: number) {
-    const fish = new FishEntity(data, this.canvas.width, this.canvas.height, index)
-    fish.onDeath = (f) => this.handleFishDeath(f)
+    const rtp = this.options.roomRtp > 0 && this.options.roomRtp <= 1 ? this.options.roomRtp : 0.90
+    const killProb = data.base_prob * rtp
+    const fish = new FishEntity(data, this.canvas.width, this.canvas.height, index, killProb)
     this.fishEntities.push(fish)
   }
 
-  private handleFishDeath(fish: FishEntity) {
-    this.spawnParticles(fish.x, fish.y, fish.size)
-    this.options.onFishKilled?.(fish.fishData.id, fish.fishData.reward_multiplier)
-    this.options.onScore?.(10)
+  // Gọi khi server xác nhận cá đã chết (hit_result.killed = true)
+  confirmFishDeath(instanceId: string) {
+    const fish = this.fishEntities.find((f) => f.instanceId === instanceId)
+    if (!fish || fish.isDead) return
 
-    const idx = this.fishEntities.indexOf(fish)
-    if (idx !== -1) this.fishEntities.splice(idx, 1)
+    this.spawnParticles(fish.x, fish.y, fish.size)
+    this.options.onScore?.(10)
+    fish.confirmDeath()
+
+    const deadX = fish.x
+    const deadY = fish.y
+    const fishList = this.options.fishList
 
     setTimeout(() => {
       if (this.isDisposed) return
-      const list = this.options.fishList
-      if (list?.length) {
-        this.addFish(list[Math.floor(Math.random() * list.length)], Math.floor(Math.random() * 100))
+      const idx = this.fishEntities.findIndex((f) => f.instanceId === instanceId)
+      if (idx !== -1) this.fishEntities.splice(idx, 1)
+      if (fishList?.length) {
+        this.addFish(fishList[Math.floor(Math.random() * fishList.length)], Math.floor(Math.random() * 100))
       }
-    }, 2000)
+    }, 600)
+
+    void deadX; void deadY // suppress unused warning
   }
 
   private spawnParticles(cx: number, cy: number, radius: number) {
@@ -200,7 +210,7 @@ export class GameScene {
       if (b.y < -15) { b.y = h + 10; b.x = Math.random() * w }
     }
 
-    // Collision
+    // Collision: đạn chạm cá → flash effect + gửi server, không tự quyết định death
     for (const bullet of this.bullets) {
       if (bullet.isDead) continue
       for (const fish of this.fishEntities) {
@@ -208,8 +218,9 @@ export class GameScene {
         const dx = bullet.x - fish.x
         const dy = bullet.y - fish.y
         if (Math.sqrt(dx * dx + dy * dy) < fish.size * 0.88) {
-          fish.takeDamage(10)
+          fish.takeDamage(10)     // visual flash effect
           bullet.destroy()
+          this.options.onHitFish?.(fish.fishData.id, fish.instanceId) // server quyết định kill
           break
         }
       }

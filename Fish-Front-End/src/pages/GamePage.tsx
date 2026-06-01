@@ -34,17 +34,24 @@ export default function GamePage() {
   })
 
   // ── WebSocket (tự động join_room khi connect, leave_room khi unmount) ──────
-  const { status: wsStatus, lastError, sendShoot, sendFishKilled } = useGameSocket(
+  const { status: wsStatus, lastError, sendShoot, sendHitFish, onFishKilledRef } = useGameSocket(
     !isNaN(roomId) ? roomId : null,
   )
+
+  // Ref để GameCanvas expose confirmFishDeath; hook gọi nó khi server confirms kill
+  const confirmDeathRef = useRef<((instanceId: string) => void) | null>(null)
 
   // ── Game state setup ───────────────────────────────────────────────────────
   useEffect(() => {
     if (room) setCurrentRoom(room)
   }, [room, setCurrentRoom])
 
+  // Reset coins/score mỗi khi roomId thay đổi (bao gồm lần mount đầu)
   useEffect(() => {
     resetGame()
+  }, [roomId, resetGame])
+
+  useEffect(() => {
     fetchWallet()
     return () => setCurrentRoom(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -72,10 +79,18 @@ export default function GamePage() {
     [sendShoot], // ← không còn balance/selectedBet trong deps
   )
 
-  const handleFishKilled = useCallback(
-    (fishId: number, rewardMultiplier: number) => sendFishKilled(fishId, rewardMultiplier),
-    [sendFishKilled],
+  const handleHitFish = useCallback(
+    (fishId: number, instanceId: string) => sendHitFish(fishId, instanceId),
+    [sendHitFish],
   )
+
+  // Kết nối onFishKilledRef (từ hook) → confirmDeathRef (vào GameCanvas)
+  // Dùng useEffect để gán ref sau khi confirmDeathRef sẵn sàng
+  useEffect(() => {
+    onFishKilledRef.current = (instanceId: string) => {
+      confirmDeathRef.current?.(instanceId)
+    }
+  }, [onFishKilledRef])
 
   // ── Error / invalid states ─────────────────────────────────────────────────
   const isLoading = roomLoading || fishLoading
@@ -117,7 +132,8 @@ export default function GamePage() {
           room={room}
           fishList={fishList}
           onShot={handleShot}
-          onFishKilled={handleFishKilled}
+          onHitFish={handleHitFish}
+          confirmDeathRef={confirmDeathRef}
         />
       )}
 
@@ -127,6 +143,30 @@ export default function GamePage() {
           <div className="text-center">
             <div className="w-16 h-16 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin mx-auto mb-4" />
             <p className="text-white/60 text-lg">Loading game...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Disconnect overlay — hiện khi WS mất kết nối sau khi đã connect */}
+      {wsStatus === 'disconnected' && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="text-center px-8 py-8 rounded-2xl bg-slate-800 border border-red-500/30 shadow-2xl max-w-sm mx-4">
+            <div className="w-14 h-14 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M18.364 5.636a9 9 0 010 12.728M15.536 8.464a5 5 0 010 7.072M6.343 17.657a9 9 0 010-12.728M8.464 15.536a5 5 0 010-7.072M12 12h.01" />
+              </svg>
+            </div>
+            <h3 className="text-white font-bold text-lg mb-1">Mất kết nối</h3>
+            <p className="text-white/50 text-sm mb-6">
+              Kết nối đến server bị gián đoạn. Ván chơi đã được lưu lại.
+            </p>
+            <button
+              onClick={() => navigate('/lobby')}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 text-white font-semibold hover:opacity-90 transition-opacity"
+            >
+              Về Lobby
+            </button>
           </div>
         </div>
       )}

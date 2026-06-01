@@ -10,15 +10,16 @@ import (
 )
 
 const createFish = `-- name: CreateFish :one
-INSERT INTO fishes (name, health, reward_multiplier, speed, asset_path)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, health, reward_multiplier, speed, asset_path, created_at, updated_at
+INSERT INTO fishes (name, health, reward_multiplier, base_prob, speed, asset_path)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, name, health, reward_multiplier, base_prob, speed, asset_path, created_at, updated_at
 `
 
 type CreateFishParams struct {
 	Name             string
 	Health           int32
 	RewardMultiplier int32
+	BaseProb         float64
 	Speed            float64
 	AssetPath        string
 }
@@ -28,6 +29,7 @@ func (q *Queries) CreateFish(ctx context.Context, arg CreateFishParams) (Fish, e
 		arg.Name,
 		arg.Health,
 		arg.RewardMultiplier,
+		arg.BaseProb,
 		arg.Speed,
 		arg.AssetPath,
 	)
@@ -37,6 +39,7 @@ func (q *Queries) CreateFish(ctx context.Context, arg CreateFishParams) (Fish, e
 		&i.Name,
 		&i.Health,
 		&i.RewardMultiplier,
+		&i.BaseProb,
 		&i.Speed,
 		&i.AssetPath,
 		&i.CreatedAt,
@@ -59,7 +62,7 @@ func (q *Queries) DeleteFish(ctx context.Context, id int32) (int32, error) {
 }
 
 const getFishByID = `-- name: GetFishByID :one
-SELECT id, name, health, reward_multiplier, speed, asset_path, created_at, updated_at
+SELECT id, name, health, reward_multiplier, base_prob, speed, asset_path, created_at, updated_at
 FROM fishes
 WHERE id = $1
 `
@@ -72,6 +75,7 @@ func (q *Queries) GetFishByID(ctx context.Context, id int32) (Fish, error) {
 		&i.Name,
 		&i.Health,
 		&i.RewardMultiplier,
+		&i.BaseProb,
 		&i.Speed,
 		&i.AssetPath,
 		&i.CreatedAt,
@@ -81,7 +85,7 @@ func (q *Queries) GetFishByID(ctx context.Context, id int32) (Fish, error) {
 }
 
 const listFishes = `-- name: ListFishes :many
-SELECT id, name, health, reward_multiplier, speed, asset_path, created_at, updated_at
+SELECT id, name, health, reward_multiplier, base_prob, speed, asset_path, created_at, updated_at
 FROM fishes
 ORDER BY reward_multiplier ASC
 `
@@ -100,6 +104,7 @@ func (q *Queries) ListFishes(ctx context.Context) ([]Fish, error) {
 			&i.Name,
 			&i.Health,
 			&i.RewardMultiplier,
+			&i.BaseProb,
 			&i.Speed,
 			&i.AssetPath,
 			&i.CreatedAt,
@@ -117,15 +122,16 @@ func (q *Queries) ListFishes(ctx context.Context) ([]Fish, error) {
 
 const updateFish = `-- name: UpdateFish :one
 UPDATE fishes
-SET name = $1, health = $2, reward_multiplier = $3, speed = $4, asset_path = $5, updated_at = NOW()
-WHERE id = $6
-RETURNING id, name, health, reward_multiplier, speed, asset_path, created_at, updated_at
+SET name = $1, health = $2, reward_multiplier = $3, base_prob = $4, speed = $5, asset_path = $6, updated_at = NOW()
+WHERE id = $7
+RETURNING id, name, health, reward_multiplier, base_prob, speed, asset_path, created_at, updated_at
 `
 
 type UpdateFishParams struct {
 	Name             string
 	Health           int32
 	RewardMultiplier int32
+	BaseProb         float64
 	Speed            float64
 	AssetPath        string
 	ID               int32
@@ -136,6 +142,7 @@ func (q *Queries) UpdateFish(ctx context.Context, arg UpdateFishParams) (Fish, e
 		arg.Name,
 		arg.Health,
 		arg.RewardMultiplier,
+		arg.BaseProb,
 		arg.Speed,
 		arg.AssetPath,
 		arg.ID,
@@ -146,6 +153,7 @@ func (q *Queries) UpdateFish(ctx context.Context, arg UpdateFishParams) (Fish, e
 		&i.Name,
 		&i.Health,
 		&i.RewardMultiplier,
+		&i.BaseProb,
 		&i.Speed,
 		&i.AssetPath,
 		&i.CreatedAt,

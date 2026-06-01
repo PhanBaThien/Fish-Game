@@ -13,6 +13,7 @@ type Fish struct {
 	Name             string
 	Health           int32
 	RewardMultiplier int32
+	BaseProb         float64
 	Speed            float64
 	AssetPath        string
 	CreatedAt        pgtype.Timestamptz

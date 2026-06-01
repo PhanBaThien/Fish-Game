@@ -32,6 +32,7 @@ type Fish struct {
 	Name             string    `json:"name"`
 	Health           int32     `json:"health"`
 	RewardMultiplier int32     `json:"reward_multiplier"`
+	BaseProb         float64   `json:"base_prob"`
 	Speed            float64   `json:"speed"`
 	AssetPath        string    `json:"asset_path"`
 	CreatedAt        time.Time `json:"created_at"`

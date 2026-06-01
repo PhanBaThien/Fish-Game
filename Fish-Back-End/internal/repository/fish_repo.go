@@ -33,6 +33,7 @@ func mapToModelFish(f dbgen.Fish) models.Fish {
 		Name:             f.Name,
 		Health:           f.Health,
 		RewardMultiplier: f.RewardMultiplier,
+		BaseProb:         f.BaseProb,
 		Speed:            f.Speed,
 		AssetPath:        f.AssetPath,
 		CreatedAt:        f.CreatedAt.Time,
@@ -69,6 +70,7 @@ func (r *fishPgRepo) Create(ctx context.Context, fish *models.Fish) error {
 		Name:             fish.Name,
 		Health:           fish.Health,
 		RewardMultiplier: fish.RewardMultiplier,
+		BaseProb:         fish.BaseProb,
 		Speed:            fish.Speed,
 		AssetPath:        fish.AssetPath,
 	})
@@ -85,6 +87,7 @@ func (r *fishPgRepo) Update(ctx context.Context, fish *models.Fish) error {
 		Name:             fish.Name,
 		Health:           fish.Health,
 		RewardMultiplier: fish.RewardMultiplier,
+		BaseProb:         fish.BaseProb,
 		Speed:            fish.Speed,
 		AssetPath:        fish.AssetPath,
 	})

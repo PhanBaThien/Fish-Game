@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS fishes (
     name              VARCHAR(100) NOT NULL,
     health            INT          NOT NULL,
     reward_multiplier INT          NOT NULL,
+    base_prob         FLOAT        NOT NULL DEFAULT 0.5, -- xác suất giết cá tại RTP=100%
     speed             FLOAT        NOT NULL DEFAULT 1.0,
     asset_path        TEXT         NOT NULL,
     created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -80,5 +81,16 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 );
 
 INSERT INTO rooms (name, max_players, rtp) VALUES ('Sảnh Tân Thủ', 4, 0.95), ('Đại Dương', 4, 0.90);
-INSERT INTO fishes (name, health, reward_multiplier, asset_path) VALUES ('Cá Con', 1, 2, '/assets/fish/small_fish.glb'), ('Cá Mập Boss', 500, 100, '/assets/fish/shark_boss.glb');
+
+-- base_prob × reward_multiplier ≈ 1.0 tại RTP 100%
+-- Ví dụ: multiplier=2 → base_prob=0.500 → kỳ vọng mỗi lần bắn trúng ở RTP 95% = 0.500 × 0.95 × 2 = 0.95 bet
+INSERT INTO fishes (name, health, reward_multiplier, base_prob, speed, asset_path) VALUES
+    ('Cá Con',       10,  2,    0.5000, 1.2, '/assets/fish/small_fish.glb'),
+    ('Cá Nhỡ',       30,  15,   0.0667, 1.0, '/assets/fish/mid_fish.glb'),
+    ('Cá Heo',       60,  30,   0.0333, 0.8, '/assets/fish/dolphin.glb'),
+    ('Cá Mập',       150, 100,  0.0100, 0.6, '/assets/fish/shark.glb'),
+    ('Cá Voi',       300, 200,  0.0050, 0.5, '/assets/fish/whale.glb'),
+    ('Tiên Cá Boss', 500, 1000, 0.0010, 0.3, '/assets/fish/mermaid_boss.glb'),
+    ('Rồng Biển',    500, 5000, 0.0002, 0.2, '/assets/fish/sea_dragon.glb');
+
 INSERT INTO roles (role_name) VALUES ('player'), ('admin') ON CONFLICT DO NOTHING;

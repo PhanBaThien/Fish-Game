@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { walletApi } from '../api/wallet'
 import { useWalletStore } from '../stores/walletStore'
@@ -75,6 +75,13 @@ export default function WalletPage() {
 
   const totalPages = txData ? Math.ceil(txData.total / PAGE_SIZE) : 0
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1
+
+  // Reset về trang cuối hợp lệ nếu offset vượt quá tổng số giao dịch
+  useEffect(() => {
+    if (txData && txData.total > 0 && offset >= txData.total) {
+      setOffset(Math.floor((txData.total - 1) / PAGE_SIZE) * PAGE_SIZE)
+    }
+  }, [txData, offset])
 
   return (
     <div className="min-h-screen bg-slate-900">

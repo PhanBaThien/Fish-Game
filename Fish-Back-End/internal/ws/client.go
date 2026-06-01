@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -20,6 +21,12 @@ const (
 	maxMsgSize = 1024
 	dbTimeout  = 5 * time.Second // timeout cho mọi DB call
 )
+
+// fishInfo lưu dữ liệu cá cần thiết cho server (multiplier + xác suất).
+type fishInfo struct {
+	multiplier int32
+	baseProb   float64
+}
 
 // msgHandlerFunc là chữ ký thống nhất cho mọi handler.
 type msgHandlerFunc func(payload json.RawMessage)
@@ -41,13 +48,14 @@ type Client struct {
 	roomUsecase   usecase.RoomUsecase
 	fishUsecase   usecase.FishUsecase
 
-	// fishMap: fishID → rewardMultiplier (load từ DB lúc join_room)
-	// Server tự tra, không tin giá trị client gửi lên
-	fishMap map[int32]int32
+	// fishMap: fishID → fishInfo (load từ DB lúc join_room)
+	// Server tự tra multiplier + base_prob, không tin giá trị client gửi lên
+	fishMap map[int32]fishInfo
 
 	// Trạng thái session hiện tại
 	sessionID int64
 	roomID    int64
+	roomRTP   float64 // RTP của phòng dạng decimal (0.0–1.0, ví dụ 0.95 = 95%)
 
 	// Counters theo dõi server-side (authoritative)
 	shotsFired int32
@@ -76,14 +84,14 @@ func NewClient(
 		walletUsecase: walletUC,
 		roomUsecase:   roomUC,
 		fishUsecase:   fishUC,
-		fishMap:       make(map[int32]int32),
+		fishMap:       make(map[int32]fishInfo),
 	}
 	c.handlers = map[string]msgHandlerFunc{
-		MsgJoinRoom:   c.handleJoinRoom,
-		MsgShoot:      c.handleShoot,
-		MsgFishKilled: c.handleFishKilled,
-		MsgLeaveRoom:  c.handleLeaveRoom,
-		MsgPing:       c.handlePing,
+		MsgJoinRoom:  c.handleJoinRoom,
+		MsgShoot:     c.handleShoot,
+		MsgHitFish:   c.handleHitFish,
+		MsgLeaveRoom: c.handleLeaveRoom,
+		MsgPing:      c.handlePing,
 	}
 	return c
 }
@@ -187,8 +195,8 @@ func (c *Client) handleJoinRoom(payload json.RawMessage) {
 	ctx, cancel := dbCtx()
 	defer cancel()
 
-	// Kiểm tra phòng tồn tại
-	_, err := c.roomUsecase.GetByID(ctx, p.RoomID)
+	// Kiểm tra phòng tồn tại và lấy RTP
+	roomData, err := c.roomUsecase.GetByID(ctx, p.RoomID)
 	if err != nil {
 		c.sendError("ROOM_NOT_FOUND", "room not found")
 		return
@@ -208,7 +216,10 @@ func (c *Client) handleJoinRoom(payload json.RawMessage) {
 		return
 	}
 	for _, f := range fishList {
-		c.fishMap[f.ID] = f.RewardMultiplier
+		c.fishMap[f.ID] = fishInfo{
+			multiplier: f.RewardMultiplier,
+			baseProb:   f.BaseProb,
+		}
 	}
 
 	// Tạo session
@@ -223,6 +234,7 @@ func (c *Client) handleJoinRoom(payload json.RawMessage) {
 	// Reset trạng thái ván chơi
 	c.sessionID        = session.ID
 	c.roomID           = p.RoomID
+	c.roomRTP          = roomData.RTP
 	c.shotsFired       = 0
 	c.fishKilled       = 0
 	c.totalSpend       = 0
@@ -271,41 +283,59 @@ func (c *Client) handleShoot(payload json.RawMessage) {
 	})
 }
 
-func (c *Client) handleFishKilled(payload json.RawMessage) {
+func (c *Client) handleHitFish(payload json.RawMessage) {
 	if c.sessionID == 0 {
 		c.sendError("NO_SESSION", "join a room first")
 		return
 	}
 
-	var p FishKilledPayload
+	var p HitFishPayload
 	if err := json.Unmarshal(payload, &p); err != nil {
-		c.sendError("BAD_REQUEST", "invalid fish_killed payload")
+		c.sendError("BAD_REQUEST", "invalid hit_fish payload")
 		return
 	}
 
-	// Fix: server tự tra multiplier từ fishMap, không dùng giá trị client gửi
-	multiplier, ok := c.fishMap[p.FishID]
+	info, ok := c.fishMap[p.FishID]
 	if !ok {
 		c.sendError("INVALID_FISH", "unknown fish id")
 		return
 	}
 
-	// dùng lastBet — viên đạn bắn trúng con cá này
-	bet := c.lastBet
-	if bet == 0 {
-		bet = 10 // fallback nếu chưa có lastBet
+	// Tính xác suất giết cá: base_prob × rtp
+	// base_prob và rtp đều là decimal (0.0–1.0) nên không cần chia 100
+	rtp := c.roomRTP
+	if rtp <= 0 || rtp > 1 {
+		rtp = 0.90 // fallback an toàn (90% RTP)
 	}
-	earned := int64(multiplier) * bet
-	c.fishKilled++
-	c.totalEarn        += earned
-	c.estimatedBalance += earned
+	killProb := info.baseProb * rtp
+	killed := rand.Float64() < killProb
 
-	c.sendJSON(MsgEarnAck, EarnAckPayload{
-		Amount:     earned,
+	result := HitResultPayload{
+		Killed:     killed,
+		FishID:     p.FishID,
+		InstanceID: p.InstanceID,
 		Balance:    c.estimatedBalance,
 		TotalEarn:  c.totalEarn,
 		FishKilled: c.fishKilled,
-	})
+	}
+
+	if killed {
+		bet := c.lastBet
+		if bet == 0 {
+			bet = 10
+		}
+		earned := int64(info.multiplier) * bet
+		c.fishKilled++
+		c.totalEarn        += earned
+		c.estimatedBalance += earned
+
+		result.Amount     = earned
+		result.Balance    = c.estimatedBalance
+		result.TotalEarn  = c.totalEarn
+		result.FishKilled = c.fishKilled
+	}
+
+	c.sendJSON(MsgHitResult, result)
 }
 
 func (c *Client) handleLeaveRoom(_ json.RawMessage) {

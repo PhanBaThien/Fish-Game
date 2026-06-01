@@ -6,19 +6,19 @@ import { useGameStore } from '../stores/gameStore'
 // ── Message types (mirror backend ws/message.go) ──────────────────────────────
 
 type WsOutMsg =
-  | { type: 'join_room';   payload: { room_id: number } }
-  | { type: 'shoot';       payload: { x: number; y: number; angle: number; bet_amount: number } }
-  | { type: 'fish_killed'; payload: { fish_id: number; reward_multiplier: number } }
-  | { type: 'leave_room';  payload: null }
-  | { type: 'ping';        payload: null }
+  | { type: 'join_room';  payload: { room_id: number } }
+  | { type: 'shoot';      payload: { x: number; y: number; angle: number; bet_amount: number } }
+  | { type: 'hit_fish';   payload: { fish_id: number; instance_id: string } }
+  | { type: 'leave_room'; payload: null }
+  | { type: 'ping';       payload: null }
 
 interface WsInMsg {
   type: string
   payload: Record<string, unknown>
 }
 
-interface ShootAckPayload  { shots_fired: number; total_spend: number; balance: number }
-interface EarnAckPayload   { amount: number; balance: number; total_earn: number; fish_killed: number }
+interface ShootAckPayload       { shots_fired: number; total_spend: number; balance: number }
+interface HitResultPayload      { killed: boolean; fish_id: number; instance_id: string; amount?: number; balance: number; total_earn: number; fish_killed: number }
 interface SessionStartedPayload { session_id: number }
 interface SessionEndedPayload   { session: unknown; wallet: { balance: number } }
 
@@ -29,23 +29,27 @@ export type WsStatus = 'idle' | 'connecting' | 'connected' | 'disconnected'
 interface WsErrorPayload { code: string; message: string }
 
 interface UseGameSocketReturn {
-  status:        WsStatus
-  sessionId:     number | null
-  lastError:     WsErrorPayload | null
-  sendShoot:     (x: number, y: number, angle: number, betAmount: number) => void
-  sendFishKilled:(fishId: number, rewardMultiplier: number) => void
+  status:          WsStatus
+  sessionId:       number | null
+  lastError:       WsErrorPayload | null
+  sendShoot:       (x: number, y: number, angle: number, betAmount: number) => void
+  sendHitFish:     (fishId: number, instanceId: string) => void
+  // GamePage gán callback vào đây; hook gọi nó khi server xác nhận killed=true
+  onFishKilledRef: { current: ((instanceId: string) => void) | null }
 }
 
 export function useGameSocket(roomId: number | null): UseGameSocketReturn {
-  const wsRef    = useRef<WebSocket | null>(null)
-  const roomIdRef = useRef(roomId) // stable ref để dùng trong cleanup
+  const wsRef     = useRef<WebSocket | null>(null)
+  const roomIdRef = useRef(roomId)
+  // Callback được GamePage gán vào; hook gọi nó khi server xác nhận killed=true
+  const onFishKilledRef = useRef<((instanceId: string) => void) | null>(null)
 
   const [status,    setStatus]    = useState<WsStatus>('idle')
   const [sessionId, setSessionId] = useState<number | null>(null)
   const [lastError, setLastError] = useState<WsErrorPayload | null>(null)
 
   const accessToken = useAuthStore(s => s.accessToken)
-  const { setBalance }       = useWalletStore()
+  const { setBalance }        = useWalletStore()
   const { addCoins, addScore } = useGameStore()
 
   // ── send helper ─────────────────────────────────────────────────────────────
@@ -62,9 +66,9 @@ export function useGameSocket(roomId: number | null): UseGameSocketReturn {
     [send],
   )
 
-  const sendFishKilled = useCallback(
-    (fishId: number, rewardMultiplier: number) =>
-      send({ type: 'fish_killed', payload: { fish_id: fishId, reward_multiplier: rewardMultiplier } }),
+  const sendHitFish = useCallback(
+    (fishId: number, instanceId: string) =>
+      send({ type: 'hit_fish', payload: { fish_id: fishId, instance_id: instanceId } }),
     [send],
   )
 
@@ -79,27 +83,29 @@ export function useGameSocket(roomId: number | null): UseGameSocketReturn {
         }
         case 'shoot_ack': {
           const p = msg.payload as unknown as ShootAckPayload
-          setBalance(p.balance)  // cập nhật balance sau khi trừ tiền đạn
+          setBalance(p.balance)
           break
         }
-
-        case 'earn_ack': {
-          const p = msg.payload as unknown as EarnAckPayload
-          addCoins(p.amount)   // cộng vào coins "ván này"
-          addScore(1)
-          setBalance(p.balance) // cập nhật balance ước tính ngay lên Navbar
+        case 'hit_result': {
+          const p = msg.payload as unknown as HitResultPayload
+          setBalance(p.balance)
+          if (p.killed) {
+            addCoins(p.amount ?? 0)
+            addScore(1)
+            // Báo GameScene để play death animation
+            onFishKilledRef.current?.(p.instance_id)
+          }
           break
         }
         case 'session_ended': {
           const p = msg.payload as unknown as SessionEndedPayload
-          setBalance(p.wallet.balance) // balance chính xác từ DB sau EndSession
+          setBalance(p.wallet.balance)
           setSessionId(null)
           break
         }
         case 'error': {
           const p = msg.payload as unknown as WsErrorPayload
           setLastError(p)
-          // Tự xóa sau 3s
           setTimeout(() => setLastError(null), 3000)
           break
         }
@@ -156,5 +162,5 @@ export function useGameSocket(roomId: number | null): UseGameSocketReturn {
     }
   }, [accessToken, roomId, handleMessage])
 
-  return { status, sessionId, lastError, sendShoot, sendFishKilled }
+  return { status, sessionId, lastError, sendShoot, sendHitFish, onFishKilledRef }
 }

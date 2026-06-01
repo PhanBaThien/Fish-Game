@@ -1,4 +1,5 @@
 import axios, { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
+import { useAuthStore } from '../stores/authStore'
 
 const BASE_URL = '/api/v1'
 
@@ -15,17 +16,9 @@ export const apiClient = axios.create({
 
 // ── Request interceptor: attach Bearer token ────────────────────────────────
 apiClient.interceptors.request.use((config) => {
-  try {
-    const raw = localStorage.getItem('fish-game-auth')
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      const token: string | undefined = parsed?.state?.accessToken
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
-      }
-    }
-  } catch {
-    // ignore parse errors
+  const token = useAuthStore.getState().accessToken
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
@@ -83,9 +76,6 @@ apiClient.interceptors.response.use(
         }>('/auth/refresh')
         const newToken = refreshRes.data.data.access_token
 
-        // Persist new token into the store via a dynamic import to avoid
-        // a circular dependency at module initialisation time
-        const { useAuthStore } = await import('../stores/authStore')
         useAuthStore.getState().setToken(newToken)
 
         drainQueue(newToken)
@@ -95,8 +85,6 @@ apiClient.interceptors.response.use(
       } catch (refreshErr) {
         rejectQueue(refreshErr)
 
-        // Refresh failed — clear auth and redirect to login
-        const { useAuthStore } = await import('../stores/authStore')
         useAuthStore.getState().logout()
         window.location.href = '/login'
 

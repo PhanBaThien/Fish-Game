@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type { User } from '../types'
 
 interface AuthState {
@@ -10,22 +9,15 @@ interface AuthState {
   logout: () => void
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      accessToken: null,
+// accessToken chỉ sống trong RAM — không persist xuống localStorage
+// Reload trang → ProtectedRoute gọi silent refresh để lấy lại token mới
+export const useAuthStore = create<AuthState>()((set) => ({
+  user: null,
+  accessToken: null,
 
-      setAuth: (user, accessToken) => set({ user, accessToken }),
+  setAuth: (user, accessToken) => set({ user, accessToken }),
 
-      setToken: (accessToken) => set({ accessToken }),
+  setToken: (accessToken) => set({ accessToken }),
 
-      logout: () => set({ user: null, accessToken: null }),
-    }),
-    {
-      name: 'fish-game-auth',
-      // Chỉ lưu accessToken vào localStorage, user không cần persist
-      partialize: (state) => ({ accessToken: state.accessToken }),
-    },
-  ),
-)
+  logout: () => set({ user: null, accessToken: null }),
+}))
